@@ -159,6 +159,9 @@
             margin-top: 25px;
             display: block;
         }
+        .search-box-container {
+            margin-bottom: 15px;
+        }
         .archive-card {
             background: #fff;
             border: 1px solid #ddd;
@@ -220,7 +223,6 @@
             cursor: pointer;
             font-size: 12px;
             font-weight: bold;
-            flex: 1;
         }
         .btn-delete:hover { background-color: #b71c1c; }
         .no-archive {
@@ -297,6 +299,12 @@
 
     <div class="archives-container">
         <h2 id="listArchivesTitle">📂 Liste des fichiers archivés</h2>
+        
+        <!-- Barre de recherche -->
+        <div class="search-box-container">
+            <input type="text" id="searchInput" oninput="filterArchives()" placeholder="🔍 Rechercher par titre, dossier, nom de fichier ou description...">
+        </div>
+
         <div id="archivesList">
             <div class="no-archive" id="loadingText">Chargement des archives depuis le cloud...</div>
         </div>
@@ -341,8 +349,10 @@
             btnUpdateDoc: "Mettre à jour l'archive",
             btnCancelEdit: "Annuler la modification",
             listArchivesTitle: "📂 Liste des fichiers archivés",
+            searchPlaceholder: "🔍 Rechercher par titre, dossier, nom de fichier ou description...",
             loadingText: "Chargement des archives depuis le cloud...",
             emptyText: "Aucune archive pour le moment.",
+            noSearchResult: "Aucun résultat trouvé pour votre recherche.",
             subFolderSuccess: "Sous-dossier créé avec succès !",
             subFolderExists: "Ce sous-dossier existe déjà.",
             subFolderAlert: "Veuillez entrer un nom pour le sous-dossier.",
@@ -375,8 +385,10 @@
             btnUpdateDoc: "Update Archive",
             btnCancelEdit: "Cancel Editing",
             listArchivesTitle: "📂 List of Archived Files",
+            searchPlaceholder: "🔍 Search by title, folder, file name or description...",
             loadingText: "Loading archives from the cloud...",
             emptyText: "No archives yet.",
+            noSearchResult: "No results found for your search.",
             subFolderSuccess: "Sub-folder created successfully!",
             subFolderExists: "This sub-folder already exists.",
             subFolderAlert: "Please enter a name for the sub-folder.",
@@ -394,6 +406,7 @@
     let currentLang = 'fr';
     let selectedFileObject = null;
     let editingDocId = null;
+    let allArchivesData = []; // Stockage global pour la recherche instantanée
 
     window.changeLanguage = function() {
         currentLang = document.getElementById('langSelector').value;
@@ -416,12 +429,12 @@
         document.getElementById('docDesc').placeholder = t.docDescPlaceholder;
         document.getElementById('btnCancelEdit').textContent = t.btnCancelEdit;
         document.getElementById('listArchivesTitle').textContent = t.listArchivesTitle;
+        document.getElementById('searchInput').placeholder = t.searchPlaceholder;
         
         const submitBtn = document.getElementById('btnSubmitDoc');
         submitBtn.textContent = editingDocId ? t.btnUpdateDoc : t.btnSubmitDoc;
 
-        const loadingEl = document.getElementById('loadingText');
-        if(loadingEl && loadingEl.classList.contains('no-archive')) loadingEl.textContent = t.emptyText;
+        renderArchives(allArchivesData);
     }
 
     const dropZone = document.getElementById('dropZone');
@@ -623,50 +636,79 @@
         }
     }
 
-    function loadArchives() {
+    function renderArchives(dataList) {
         const container = document.getElementById('archivesList');
+        const t = translations[currentLang];
         
-        onSnapshot(collection(db, "archives"), (snapshot) => {
-            container.innerHTML = '';
-            const t = translations[currentLang];
+        container.innerHTML = '';
+
+        if (dataList.length === 0) {
+            const msg = allArchivesData.length === 0 ? t.emptyText : t.noSearchResult;
+            container.innerHTML = `<div class="no-archive">${msg}</div>`;
+            return;
+        }
+
+        dataList.forEach((item) => {
+            const card = document.createElement('div');
+            card.className = 'archive-card';
             
-            if (snapshot.empty) {
-                container.innerHTML = `<div class="no-archive" id="loadingText">${t.emptyText}</div>`;
-                return;
-            }
+            const safeTitle = (item.title || '').replace(/'/g, "\\'");
+            const safeFolder = (item.folder || '').replace(/'/g, "\\'");
+            const safeDate = (item.date || '').replace(/'/g, "\\'");
+            const safeFileName = (item.fileName || '').replace(/'/g, "\\'");
+            const safeDesc = (item.desc || '').replace(/'/g, "\\'");
 
+            let actionsHtml = `<div class="archive-actions">`;
+            actionsHtml += `<button onclick="editArchive('${item.id}', '${safeTitle}', '${safeFolder}', '${safeDate}', '${safeFileName}', '${safeDesc}')" class="btn-edit">${t.editBtn}</button>`;
+            actionsHtml += `<button onclick="deleteArchive('${item.id}')" class="btn-delete">${t.deleteBtn}</button>`;
+            actionsHtml += `</div>`;
+
+            card.innerHTML = `
+                <div class="archive-header">
+                    <span class="archive-title">${item.title}</span>
+                    <span class="archive-folder">📁 ${item.folder}</span>
+                </div>
+                <div class="archive-details">
+                    <div>📅 Date : ${item.date}</div>
+                    <div>📎 Fichier : ${item.fileName || t.noFile}</div>
+                    <div>📝 Description : ${item.desc}</div>
+                </div>
+                ${actionsHtml}
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    window.filterArchives = function() {
+        const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        if (!query) {
+            renderArchives(allArchivesData);
+            return;
+        }
+
+        const filtered = allArchivesData.filter(item => {
+            return (
+                (item.title && item.title.toLowerCase().includes(query)) ||
+                (item.folder && item.folder.toLowerCase().includes(query)) ||
+                (item.fileName && item.fileName.toLowerCase().includes(query)) ||
+                (item.desc && item.desc.toLowerCase().includes(query)) ||
+                (item.date && item.date.toLowerCase().includes(query))
+            );
+        });
+
+        renderArchives(filtered);
+    }
+
+    function loadArchives() {
+        onSnapshot(collection(db, "archives"), (snapshot) => {
+            allArchivesData = [];
             snapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                const docId = docSnap.id;
-                const card = document.createElement('div');
-                card.className = 'archive-card';
-                
-                // Échappements sécurisés pour éviter les bugs avec les guillemets dans les titres/descriptions
-                const safeTitle = (data.title || '').replace(/'/g, "\\'");
-                const safeFolder = (data.folder || '').replace(/'/g, "\\'");
-                const safeDate = (data.date || '').replace(/'/g, "\\'");
-                const safeFileName = (data.fileName || '').replace(/'/g, "\\'");
-                const safeDesc = (data.desc || '').replace(/'/g, "\\'");
-
-                let actionsHtml = `<div class="archive-actions">`;
-                actionsHtml += `<button onclick="editArchive('${docId}', '${safeTitle}', '${safeFolder}', '${safeDate}', '${safeFileName}', '${safeDesc}')" class="btn-edit">${t.editBtn}</button>`;
-                actionsHtml += `<button onclick="deleteArchive('${docId}')" class="btn-delete">${t.deleteBtn}</button>`;
-                actionsHtml += `</div>`;
-
-                card.innerHTML = `
-                    <div class="archive-header">
-                        <span class="archive-title">${data.title}</span>
-                        <span class="archive-folder">📁 ${data.folder}</span>
-                    </div>
-                    <div class="archive-details">
-                        <div>📅 Date : ${data.date}</div>
-                        <div>📎 Fichier : ${data.fileName || t.noFile}</div>
-                        <div>📝 Description : ${data.desc}</div>
-                    </div>
-                    ${actionsHtml}
-                `;
-                container.appendChild(card);
+                allArchivesData.push({
+                    id: docSnap.id,
+                    ...docSnap.data()
+                });
             });
+            filterArchives(); // Applique le filtre en cours s'il y a du texte, sinon affiche tout
         });
     }
 
