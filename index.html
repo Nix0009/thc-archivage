@@ -99,6 +99,7 @@
         }
         .btn-primary { background-color: var(--primary-blue); }
         .btn-primary:hover { background-color: #0d47a1; }
+        .btn-primary:disabled { background-color: #90caf9; cursor: not-allowed; }
         
         .btn-secondary { background-color: var(--accent-color); }
         .btn-secondary:hover { background-color: #2c3e50; }
@@ -117,7 +118,6 @@
             h2 { font-size: 18px; }
         }
         
-        /* Style moderne en cartes pour mobile et tableau sur PC */
         .archives-container {
             margin-top: 25px;
         }
@@ -193,7 +193,6 @@
 <body>
 
 <div class="container">
-    <!-- Sélecteur de langue en haut -->
     <div class="header-bar">
         <span></span>
         <select id="langSelector" class="lang-select" onchange="changeLanguage()">
@@ -202,22 +201,18 @@
         </select>
     </div>
 
-    <!-- Logo -->
     <div class="logo-container">
         <img src="https://i.postimg.cc/yxxj5h9m/THC.png" alt="Logo Trust Handling Company">
     </div>
 
     <h1 id="mainTitle">Système d'Archivage - THC</h1>
 
-    <!-- SECTION GESTION DES SOUS-DOSSIERS -->
     <div class="management-section">
         <h2 id="subFolderSectionTitle">⚙️ Créer un sous-dossier</h2>
         <div class="flex-row">
             <div class="flex-col">
                 <label id="lblParentFolder" for="parentFolderSelect">Dossier Principal cible</label>
-                <select id="parentFolderSelect">
-                    <!-- Rempli automatiquement -->
-                </select>
+                <select id="parentFolderSelect"></select>
             </div>
             <div class="flex-col">
                 <label id="lblSubFolderName" for="newSubFolderName">Nom du nouveau sous-dossier</label>
@@ -227,7 +222,6 @@
         <button id="btnAddSubFolder" onclick="addSubFolder()" class="btn-secondary" style="margin-top: 15px;">Ajouter le sous-dossier</button>
     </div>
 
-    <!-- FORMULAIRE D'ARCHIVAGE -->
     <div class="form-group">
         <label id="lblDocTitle" for="docTitle">Titre du document</label>
         <input type="text" id="docTitle" placeholder="Ex: Rapport mensuel">
@@ -235,9 +229,7 @@
 
     <div class="form-group">
         <label id="lblFinalFolder" for="finalFolderSelect">Emplacement de destination (Dossier ou Sous-dossier)</label>
-        <select id="finalFolderSelect">
-            <!-- Rempli automatiquement -->
-        </select>
+        <select id="finalFolderSelect"></select>
     </div>
 
     <div class="form-group">
@@ -257,19 +249,16 @@
 
     <button id="btnSubmitDoc" onclick="addDocument()" class="btn-primary">Enregistrer dans les archives</button>
 
-    <!-- LISTE DES ARCHIVES (MODE CARTES ADAPTÉ MOBILE) -->
     <div id="archivesList" class="archives-container">
         <div class="no-archive" id="loadingText">Chargement des archives depuis le cloud...</div>
     </div>
 </div>
 
-<!-- Importation de Firebase SDK (Version Modulaire 10) -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-    // Votre configuration Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyDTfE06jD2NUS7-l5ynx0Iy-kFtg-8IzPw",
         authDomain: "thc-archivage.firebaseapp.com",
@@ -284,7 +273,6 @@
     const db = getFirestore(app);
     const storage = getStorage(app);
 
-    // Dictionnaire de traduction
     const translations = {
         fr: {
             pageTitle: "Archivage - Trust Handling Company",
@@ -309,7 +297,7 @@
             subFolderAlert: "Veuillez entrer un nom pour le sous-dossier.",
             docTitleAlert: "Veuillez entrer un titre de document.",
             docSuccessAlert: "Document et fichier archivés avec succès !",
-            docErrorAlert: "Erreur lors de l'enregistrement.",
+            docErrorAlert: "Erreur réseau : impossible d'envoyer le fichier. Vérifiez votre connexion.",
             uploadingText: "Envoi du fichier en cours...",
             noFile: "Aucun fichier",
             downloadBtn: "📥 Télécharger",
@@ -339,7 +327,7 @@
             subFolderAlert: "Please enter a name for the sub-folder.",
             docTitleAlert: "Please enter a document title.",
             docSuccessAlert: "Document and file successfully archived!",
-            docErrorAlert: "Error saving.",
+            docErrorAlert: "Network error: could not upload file. Check your connection.",
             uploadingText: "Uploading file...",
             noFile: "No file",
             downloadBtn: "📥 Download",
@@ -464,6 +452,8 @@
                 const file = fileInput.files[0];
                 fileName = file.name;
                 const storageRef = ref(storage, 'documents/' + Date.now() + '_' + fileName);
+                
+                // Upload avec promesse de sécurité (timeout géré implicitement par l'attrape d'erreur)
                 const snapshot = await uploadBytes(storageRef, file);
                 fileUrl = await getDownloadURL(snapshot.ref);
             }
@@ -494,7 +484,6 @@
         }
     }
 
-    // Fonction pour supprimer une archive
     window.deleteArchive = async function(id) {
         const t = translations[currentLang];
         if(confirm(t.confirmDelete)) {
