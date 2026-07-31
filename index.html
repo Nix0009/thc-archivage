@@ -88,6 +88,27 @@
             font-size: 14px;
         }
         
+        /* Barre de recherche mise en valeur */
+        .search-box-container {
+            margin-bottom: 15px;
+        }
+        .search-input-styled {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--primary-blue) !important;
+            border-radius: 8px;
+            font-size: 15px;
+            background-color: #f0f7ff;
+            box-sizing: border-box;
+            outline: none;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .search-input-styled:focus {
+            background-color: #fff;
+            border-color: #0d47a1 !important;
+            box-shadow: 0 0 5px rgba(25, 118, 210, 0.3);
+        }
+
         /* Zone de Glisser-Déposer (Drag and Drop) */
         .drop-zone {
             border: 2px dashed #1976d2;
@@ -158,9 +179,6 @@
         .archives-container {
             margin-top: 25px;
             display: block;
-        }
-        .search-box-container {
-            margin-bottom: 15px;
         }
         .archive-card {
             background: #fff;
@@ -300,9 +318,9 @@
     <div class="archives-container">
         <h2 id="listArchivesTitle">📂 Liste des fichiers archivés</h2>
         
-        <!-- Barre de recherche -->
+        <!-- Barre de recherche bien visible -->
         <div class="search-box-container">
-            <input type="text" id="searchInput" oninput="filterArchives()" placeholder="🔍 Rechercher par titre, dossier, nom de fichier ou description...">
+            <input type="text" id="searchInput" class="search-input-styled" oninput="filterArchives()" placeholder="🔍 Rechercher par titre, dossier, nom de fichier ou description...">
         </div>
 
         <div id="archivesList">
@@ -406,7 +424,7 @@
     let currentLang = 'fr';
     let selectedFileObject = null;
     let editingDocId = null;
-    let allArchivesData = []; // Stockage global pour la recherche instantanée
+    let allArchivesData = [];
 
     window.changeLanguage = function() {
         currentLang = document.getElementById('langSelector').value;
@@ -708,7 +726,7 @@
                     ...docSnap.data()
                 });
             });
-            filterArchives(); // Applique le filtre en cours s'il y a du texte, sinon affiche tout
+            filterArchives();
         });
     }
 
