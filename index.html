@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Archivage - Trust Handling Company</title>
+    <title>Archivage Public - Trust Handling Company</title>
     <style>
         :root {
             --primary-red: #d32f2f;
@@ -138,7 +138,7 @@
         <img src="https://i.postimg.cc/yxxj5h9m/THC.png" alt="Logo Trust Handling Company">
     </div>
 
-    <h1>Système d'Archivage - THC</h1>
+    <h1>Système d'Archivage Public - THC</h1>
 
     <!-- SECTION GESTION DES SOUS-DOSSIERS -->
     <div class="management-section">
@@ -186,7 +186,7 @@
         <textarea id="docDesc" rows="2" placeholder="Détails optionnels..."></textarea>
     </div>
 
-    <button onclick="addDocument()" class="btn-primary">Enregistrer dans les archives</button>
+    <button onclick="addDocument()" class="btn-primary">Enregistrer dans les archives publiques</button>
 
     <!-- TABLEAU DES ARCHIVES -->
     <div class="table-responsive">
@@ -201,13 +201,33 @@
                 </tr>
             </thead>
             <tbody id="archiveTableBody">
-                <tr><td colspan="5" style="text-align: center; color: #777;">Aucune archive pour le moment.</td></tr>
+                <tr><td colspan="5" style="text-align: center; color: #777;">Chargement des archives depuis le cloud...</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
-<script>
+<!-- Importation de Firebase SDK (Version Modulaire 9) -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // Votre configuration Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyDTfE06jD2NUS7-l5ynx0Iy-kFtg-8IzPw",
+        authDomain: "thc-archivage.firebaseapp.com",
+        projectId: "thc-archivage",
+        storageBucket: "thc-archivage.firebasestorage.app",
+        messagingSenderId: "630363860954",
+        appId: "1:630363860954:web:953c7a0e15bfa53b469ae3",
+        measurementId: "G-9MDJ6J0CK3"
+    };
+
+    // Initialisation Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Structure des dossiers de base
     let folderStructure = {
         "Administration": [],
         "Comptabilité": [],
@@ -216,10 +236,13 @@
         "Rapport": []
     };
 
-    function updateAllSelects() {
+    // Remplir les listes déroulantes
+    window.updateAllSelects = function() {
         const parentSelect = document.getElementById('parentFolderSelect');
         const finalSelect = document.getElementById('finalFolderSelect');
         
+        if(!parentSelect || !finalSelect) return;
+
         const currentParent = parentSelect.value;
         const currentFinal = finalSelect.value;
 
@@ -237,19 +260,21 @@
             mainOptionFinal.textContent = `📁 ${mainFolder}`;
             finalSelect.appendChild(mainOptionFinal);
 
-            folderStructure[mainFolder].forEach(subFolder => {
-                const subOption = document.createElement('option');
-                subOption.value = `${mainFolder} / ${subFolder}`;
-                subOption.textContent = `   └─ ${subFolder}`;
-                finalSelect.appendChild(subOption);
-            });
+            if(folderStructure[mainFolder]) {
+                folderStructure[mainFolder].forEach(subFolder => {
+                    const subOption = document.createElement('option');
+                    subOption.value = `${mainFolder} / ${subFolder}`;
+                    subOption.textContent = `   └─ ${subFolder}`;
+                    finalSelect.appendChild(subOption);
+                });
+            }
         }
 
-        parentSelect.value = currentParent;
-        finalSelect.value = currentFinal;
+        if(currentParent) parentSelect.value = currentParent;
+        if(currentFinal) finalSelect.value = currentFinal;
     }
 
-    function addSubFolder() {
+    window.addSubFolder = function() {
         const parent = document.getElementById('parentFolderSelect').value;
         const subName = document.getElementById('newSubFolderName').value.trim();
 
@@ -258,18 +283,18 @@
             return;
         }
 
-        if(folderStructure[parent].includes(subName)) {
-            alert("Ce sous-dossier existe déjà dans ce dossier principal.");
-            return;
+        if(!folderStructure[parent].includes(subName)) {
+            folderStructure[parent].push(subName);
+            document.getElementById('newSubFolderName').value = '';
+            window.updateAllSelects();
+            alert(`Sous-dossier '${subName}' créé avec succès !`);
+        } else {
+            alert("Ce sous-dossier existe déjà.");
         }
-
-        folderStructure[parent].push(subName);
-        document.getElementById('newSubFolderName').value = '';
-        updateAllSelects();
-        alert(`Sous-dossier '${subName}' créé avec succès dans '${parent}' !`);
     }
 
-    function addDocument() {
+    // Enregistrer un document dans Firestore
+    window.addDocument = async function() {
         const title = document.getElementById('docTitle').value;
         const finalFolder = document.getElementById('finalFolderSelect').value;
         const date = document.getElementById('docDate').value;
@@ -286,29 +311,61 @@
             fileName = fileInput.files[0].name;
         }
 
-        const tbody = document.getElementById('archiveTableBody');
-        if(tbody.innerHTML.includes('Aucune archive')) {
-            tbody.innerHTML = '';
+        try {
+            // Envoi vers la collection 'archives' de Firestore
+            await addDoc(collection(db, "archives"), {
+                title: title,
+                folder: finalFolder,
+                date: date || '-',
+                fileName: fileName,
+                desc: desc || '-',
+                timestamp: new Date()
+            });
+
+            alert('Document archivé avec succès dans le cloud public !');
+            
+            // Réinitialisation du formulaire
+            document.getElementById('docTitle').value = '';
+            document.getElementById('docFile').value = '';
+            document.getElementById('docDesc').value = '';
+            document.getElementById('docDate').value = '';
+
+        } catch (error) {
+            console.error("Erreur lors de l'enregistrement : ", error);
+            alert("Erreur lors de l'enregistrement dans le cloud.");
         }
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><strong>${title}</strong></td>
-            <td class="folder-cell">${finalFolder}</td>
-            <td>${date || '-'}</td>
-            <td>${fileName}</td>
-            <td>${desc || '-'}</td>
-        `;
-        tbody.appendChild(row);
-
-        document.getElementById('docTitle').value = '';
-        document.getElementById('docFile').value = '';
-        document.getElementById('docDesc').value = '';
-        document.getElementById('docDate').value = '';
-        alert('Document archivé avec succès !');
     }
 
-    updateAllSelects();
+    // Charger et écouter les modifications du tableau en temps réel depuis Firestore
+    function loadArchives() {
+        const tbody = document.getElementById('archiveTableBody');
+        
+        onSnapshot(collection(db, "archives"), (snapshot) => {
+            tbody.innerHTML = '';
+            
+            if (snapshot.empty) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #777;">Aucune archive pour le moment.</td></tr>';
+                return;
+            }
+
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${data.title}</strong></td>
+                    <td class="folder-cell">${data.folder}</td>
+                    <td>${data.date}</td>
+                    <td>${data.fileName}</td>
+                    <td>${data.desc}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        });
+    }
+
+    // Lancement initial
+    window.updateAllSelects();
+    loadArchives();
 </script>
 
 </body>
