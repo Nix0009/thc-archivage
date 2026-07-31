@@ -117,57 +117,77 @@
             h2 { font-size: 18px; }
         }
         
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
+        /* Style moderne en cartes pour mobile et tableau sur PC */
+        .archives-container {
             margin-top: 25px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 700px;
-        }
-        th, td {
+        .archive-card {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-left: 5px solid var(--primary-blue);
+            border-radius: 8px;
             padding: 12px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-            font-size: 13px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        th {
-            background-color: var(--dark-bg);
-            color: white;
-        }
-        td.folder-cell {
-            font-family: monospace;
-            color: #1976d2;
-            font-weight: bold;
-        }
-        .actions-cell {
+        .archive-header {
             display: flex;
-            gap: 6px;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .archive-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--dark-bg);
+        }
+        .archive-folder {
+            font-family: monospace;
+            background: #e3f2fd;
+            color: var(--primary-blue);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .archive-details {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+        .archive-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            border-top: 1px solid #eee;
+            padding-top: 8px;
         }
         .btn-download {
             background-color: #2e7d32;
             color: white;
-            padding: 6px 10px;
+            padding: 6px 12px;
             border-radius: 4px;
             text-decoration: none;
             font-size: 12px;
-            display: inline-block;
+            font-weight: bold;
         }
         .btn-download:hover { background-color: #1b5e20; }
 
         .btn-delete {
-            background-color: #c62828;
+            background-color: var(--primary-red);
             color: white;
-            padding: 6px 10px;
+            padding: 6px 12px;
             border-radius: 4px;
             border: none;
             cursor: pointer;
             font-size: 12px;
-            width: auto;
+            font-weight: bold;
         }
         .btn-delete:hover { background-color: #b71c1c; }
+        .no-archive {
+            text-align: center;
+            color: #777;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -237,23 +257,9 @@
 
     <button id="btnSubmitDoc" onclick="addDocument()" class="btn-primary">Enregistrer dans les archives</button>
 
-    <!-- TABLEAU DES ARCHIVES -->
-    <div class="table-responsive">
-        <table>
-            <thead>
-                <tr>
-                    <th id="thTitle">Titre</th>
-                    <th id="thFolder">Emplacement</th>
-                    <th id="thDate">Date</th>
-                    <th id="thFile">Fichier</th>
-                    <th id="thDesc">Description</th>
-                    <th id="thAction">Action</th>
-                </tr>
-            </thead>
-            <tbody id="archiveTableBody">
-                <tr><td colspan="6" id="loadingText" style="text-align: center; color: #777;">Chargement des archives depuis le cloud...</td></tr>
-            </tbody>
-        </table>
+    <!-- LISTE DES ARCHIVES (MODE CARTES ADAPTÉ MOBILE) -->
+    <div id="archivesList" class="archives-container">
+        <div class="no-archive" id="loadingText">Chargement des archives depuis le cloud...</div>
     </div>
 </div>
 
@@ -296,12 +302,6 @@
             lblDocDesc: "Description / Mots-clés",
             docDescPlaceholder: "Détails optionnels...",
             btnSubmitDoc: "Enregistrer dans les archives",
-            thTitle: "Titre",
-            thFolder: "Emplacement",
-            thDate: "Date",
-            thFile: "Fichier",
-            thDesc: "Description",
-            thAction: "Action",
             loadingText: "Chargement des archives depuis le cloud...",
             emptyText: "Aucune archive pour le moment.",
             subFolderSuccess: "Sous-dossier créé avec succès !",
@@ -332,12 +332,6 @@
             lblDocDesc: "Description / Keywords",
             docDescPlaceholder: "Optional details...",
             btnSubmitDoc: "Save to Archives",
-            thTitle: "Title",
-            thFolder: "Location",
-            thDate: "Date",
-            thFile: "File",
-            thDesc: "Description",
-            thAction: "Action",
             loadingText: "Loading archives from the cloud...",
             emptyText: "No archives yet.",
             subFolderSuccess: "Sub-folder created successfully!",
@@ -375,12 +369,6 @@
         document.getElementById('lblDocDesc').textContent = t.lblDocDesc;
         document.getElementById('docDesc').placeholder = t.docDescPlaceholder;
         document.getElementById('btnSubmitDoc').textContent = t.btnSubmitDoc;
-        document.getElementById('thTitle').textContent = t.thTitle;
-        document.getElementById('thFolder').textContent = t.thFolder;
-        document.getElementById('thDate').textContent = t.thDate;
-        document.getElementById('thFile').textContent = t.thFile;
-        document.getElementById('thDesc').textContent = t.thDesc;
-        document.getElementById('thAction').textContent = t.thAction;
         
         const loadingEl = document.getElementById('loadingText');
         if(loadingEl) loadingEl.textContent = t.loadingText;
@@ -520,39 +508,43 @@
     }
 
     function loadArchives() {
-        const tbody = document.getElementById('archiveTableBody');
+        const container = document.getElementById('archivesList');
         
         onSnapshot(collection(db, "archives"), (snapshot) => {
-            tbody.innerHTML = '';
+            container.innerHTML = '';
             const t = translations[currentLang];
             
             if (snapshot.empty) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #777;">${t.emptyText}</td></tr>`;
+                container.innerHTML = `<div class="no-archive">${t.emptyText}</div>`;
                 return;
             }
 
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
                 const docId = docSnap.id;
-                const row = document.createElement('tr');
+                const card = document.createElement('div');
+                card.className = 'archive-card';
                 
-                let actionsHtml = `<button onclick="deleteArchive('${docId}')" class="btn-delete">${t.deleteBtn}</button>`;
+                let actionsHtml = `<div class="archive-actions">`;
                 if (data.fileUrl) {
-                    actionsHtml = `<div class="actions-cell">
-                        <a href="${data.fileUrl}" target="_blank" class="btn-download">${t.downloadBtn}</a>
-                        <button onclick="deleteArchive('${docId}')" class="btn-delete">${t.deleteBtn}</button>
-                    </div>`;
+                    actionsHtml += `<a href="${data.fileUrl}" target="_blank" class="btn-download">${t.downloadBtn}</a>`;
                 }
+                actionsHtml += `<button onclick="deleteArchive('${docId}')" class="btn-delete">${t.deleteBtn}</button>`;
+                actionsHtml += `</div>`;
 
-                row.innerHTML = `
-                    <td><strong>${data.title}</strong></td>
-                    <td class="folder-cell">${data.folder}</td>
-                    <td>${data.date}</td>
-                    <td>${data.fileName}</td>
-                    <td>${data.desc}</td>
-                    <td>${actionsHtml}</td>
+                card.innerHTML = `
+                    <div class="archive-header">
+                        <span class="archive-title">${data.title}</span>
+                        <span class="archive-folder">📁 ${data.folder}</span>
+                    </div>
+                    <div class="archive-details">
+                        <div>📅 Date : ${data.date}</div>
+                        <div>📎 Fichier : ${data.fileName || t.noFile}</div>
+                        <div>📝 Description : ${data.desc}</div>
+                    </div>
+                    ${actionsHtml}
                 `;
-                tbody.appendChild(row);
+                container.appendChild(card);
             });
         });
     }
