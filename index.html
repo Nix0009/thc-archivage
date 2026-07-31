@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archivage - Trust Handling Company</title>
+    <style>
+        :root {
+            --primary-red: #d32f2f;
+            --primary-blue: #1976d2;
+            --dark-bg: #2c3e50;
+            --light-bg: #f8f9fa;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 25px;
+            background-color: var(--dark-bg);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .logo-container img {
+            max-height: 90px;
+            width: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        h1 {
+            color: var(--dark-bg);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], input[type="date"], select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        button {
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #0d47a1;
+        }
+        table {
+            width: 100%;
+            margin-top: 30px;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: var(--dark-bg);
+            color: white;
+        }
+        .folder-manager {
+            margin-bottom: 25px;
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Logo avec votre lien -->
+    <div class="logo-container">
+        <img src="https://i.postimg.cc/yxxj5h9m/THC.png" alt="Logo Trust Handling Company">
+    </div>
+
+    <h1>Système d'Archivage - THC</h1>
+
+    <div class="folder-manager">
+        <input type="text" id="newFolderName" placeholder="Nom du nouveau dossier...">
+        <button onclick="addFolder()" style="width: auto;">Ajouter un dossier</button>
+    </div>
+
+    <div class="form-group">
+        <label for="docTitle">Titre du document</label>
+        <input type="text" id="docTitle" placeholder="Ex: Rapport Annuel">
+    </div>
+
+    <div class="form-group">
+        <label for="docFolder">Dossier de destination</label>
+        <select id="docFolder">
+            <option value="Général">Général</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="docDate">Date</label>
+        <input type="date" id="docDate">
+    </div>
+
+    <div class="form-group">
+        <label for="docDesc">Description / Mots-clés</label>
+        <textarea id="docDesc" rows="3" placeholder="Ajoutez des détails..."></textarea>
+    </div>
+
+    <button onclick="addDocument()">Enregistrer dans les archives</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Titre</th>
+                <th>Dossier</th>
+                <th>Date</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody id="archiveTableBody">
+            <tr><td colspan="4" style="text-align: center; color: #777;">Aucune archive pour le moment.</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // Gère l'ajout dynamique de nouveaux dossiers dans la liste déroulante
+    function addFolder() {
+        const name = document.getElementById('newFolderName').value.trim();
+        if(name) {
+            const select = document.getElementById('docFolder');
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+            document.getElementById('newFolderName').value = '';
+            alert('Dossier ajouté avec succès !');
+        } else {
+            alert("Veuillez entrer un nom de dossier valide.");
+        }
+    }
+
+    // Gère l'ajout d'un nouveau document dans le tableau d'archives
+    function addDocument() {
+        const title = document.getElementById('docTitle').value;
+        const folder = document.getElementById('docFolder').value;
+        const date = document.getElementById('docDate').value;
+        const desc = document.getElementById('docDesc').value;
+
+        // Validation du titre
+        if(!title) {
+            alert('Veuillez entrer un titre de document.');
+            return;
+        }
+
+        const tbody = document.getElementById('archiveTableBody');
+        
+        // Supprime le message "Aucune archive" si c'est la première entrée
+        if(tbody.innerHTML.includes('Aucune archive')) {
+            tbody.innerHTML = '';
+        }
+
+        // Crée la nouvelle ligne
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${title}</td><td>${folder}</td><td>${date || '-'}</td><td>${desc || '-'}</td>`;
+        tbody.appendChild(row);
+
+        // Réinitialise le formulaire
+        document.getElementById('docTitle').value = '';
+        document.getElementById('docDesc').value = '';
+        document.getElementById('docDate').value = '';
+        alert('Document archivé avec succès !');
+    }
+</script>
+
+</body>
+</html>
