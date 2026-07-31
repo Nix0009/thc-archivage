@@ -120,6 +120,7 @@
         
         .archives-container {
             margin-top: 25px;
+            display: block; /* Liste de nouveau visible */
         }
         .archive-card {
             background: #fff;
@@ -453,7 +454,6 @@
                 fileName = file.name;
                 const storageRef = ref(storage, 'documents/' + Date.now() + '_' + fileName);
                 
-                // Upload avec promesse de sécurité (timeout géré implicitement par l'attrape d'erreur)
                 const snapshot = await uploadBytes(storageRef, file);
                 fileUrl = await getDownloadURL(snapshot.ref);
             }
