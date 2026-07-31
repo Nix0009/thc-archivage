@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Systeme d'archivage - Trust Handling Company</title>
+    <title id="pageTitle">Archivage - Trust Handling Company</title>
     <style>
         :root {
             --primary-red: #d32f2f;
@@ -26,6 +26,20 @@
             padding: 15px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .lang-select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            background: #fff;
+            font-weight: bold;
+            cursor: pointer;
         }
         .logo-container {
             text-align: center;
@@ -133,75 +147,84 @@
 <body>
 
 <div class="container">
+    <!-- Sélecteur de langue en haut -->
+    <div class="header-bar">
+        <span></span>
+        <select id="langSelector" class="lang-select" onchange="changeLanguage()">
+            <option value="fr">🇫🇷 Français</option>
+            <option value="en">🇬🇧 English</option>
+        </select>
+    </div>
+
     <!-- Logo -->
     <div class="logo-container">
         <img src="https://i.postimg.cc/yxxj5h9m/THC.png" alt="Logo Trust Handling Company">
     </div>
 
-    <h1>Système d'Archivage Public - THC</h1>
+    <h1 id="mainTitle">Système d'Archivage - THC</h1>
 
     <!-- SECTION GESTION DES SOUS-DOSSIERS -->
     <div class="management-section">
-        <h2>⚙️ Créer un sous-dossier</h2>
+        <h2 id="subFolderSectionTitle">⚙️ Créer un sous-dossier</h2>
         <div class="flex-row">
             <div class="flex-col">
-                <label for="parentFolderSelect">Dossier Principal cible</label>
+                <label id="lblParentFolder" for="parentFolderSelect">Dossier Principal cible</label>
                 <select id="parentFolderSelect">
                     <!-- Rempli automatiquement -->
                 </select>
             </div>
             <div class="flex-col">
-                <label for="newSubFolderName">Nom du nouveau sous-dossier</label>
+                <label id="lblSubFolderName" for="newSubFolderName">Nom du nouveau sous-dossier</label>
                 <input type="text" id="newSubFolderName" placeholder="Ex: Janvier 2026, Factures...">
             </div>
         </div>
-        <button onclick="addSubFolder()" class="btn-secondary" style="margin-top: 15px;">Ajouter le sous-dossier</button>
+        <button id="btnAddSubFolder" onclick="addSubFolder()" class="btn-secondary" style="margin-top: 15px;">Ajouter le sous-dossier</button>
     </div>
 
     <!-- FORMULAIRE D'ARCHIVAGE -->
     <div class="form-group">
-        <label for="docTitle">Titre du document</label>
+        <label id="lblDocTitle" for="docTitle">Titre du document</label>
         <input type="text" id="docTitle" placeholder="Ex: Rapport mensuel">
     </div>
 
     <div class="form-group">
-        <label for="finalFolderSelect">Emplacement de destination (Dossier ou Sous-dossier)</label>
+        <label id="lblFinalFolder" for="finalFolderSelect">Emplacement de destination (Dossier ou Sous-dossier)</label>
         <select id="finalFolderSelect">
             <!-- Rempli automatiquement -->
         </select>
     </div>
 
     <div class="form-group">
-        <label for="docDate">Date</label>
+        <label id="lblDocDate" for="docDate">Date</label>
         <input type="date" id="docDate">
     </div>
 
     <div class="form-group">
-        <label for="docFile">Document (Word, Excel, PDF, Image...)</label>
+        <label id="lblDocFile" for="docFile">Document (Word, Excel, PDF, Image...)</label>
         <input type="file" id="docFile" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
     </div>
 
     <div class="form-group">
-        <label for="docDesc">Description / Mots-clés</label>
+        <label id="lblDocDesc" for="docDesc">Description / Mots-clés</label>
         <textarea id="docDesc" rows="2" placeholder="Détails optionnels..."></textarea>
     </div>
 
-    <button onclick="addDocument()" class="btn-primary">Enregistrer dans les archives publiques</button>
+    <button id="btnSubmitDoc" onclick="addDocument()" class="btn-primary">Enregistrer dans les archives</button>
 
     <!-- TABLEAU DES ARCHIVES -->
     <div class="table-responsive">
         <table>
             <thead>
                 <tr>
-                    <th>Titre</th>
-                    <th>Emplacement</th>
-                    <th>Date</th>
-                    <th>Fichier</th>
-                    <th>Description</th>
+                    <th id="thTitle">Titre</th>
+                    <th id="thFolder">Emplacement</th>
+                    <th id="thDate">Date</th>
+                    <th id="thFile">Fichier</th>
+                    <th id="thDesc">Description</th>
                 </tr>
             </thead>
             <tbody id="archiveTableBody">
-                <tr><td colspan="5" style="text-align: center; color: #777;">Chargement des archives depuis le cloud...</td></tr>
+                <tr><td colspan="5" id="loadingText" style="text-align: center; color: #777;">Chargement des archives depuis le cloud...</td></tr>
             </tbody>
         </table>
     </div>
@@ -223,11 +246,106 @@
         measurementId: "G-9MDJ6J0CK3"
     };
 
-    // Initialisation Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Structure des dossiers de base
+    // Dictionnaire de traduction
+    const translations = {
+        fr: {
+            pageTitle: "Archivage - Trust Handling Company",
+            mainTitle: "Système d'Archivage - THC",
+            subFolderSectionTitle: "⚙️ Créer un sous-dossier",
+            lblParentFolder: "Dossier Principal cible",
+            lblSubFolderName: "Nom du nouveau sous-dossier",
+            subFolderPlaceholder: "Ex: Janvier 2026, Factures...",
+            btnAddSubFolder: "Ajouter le sous-dossier",
+            lblDocTitle: "Titre du document",
+            docTitlePlaceholder: "Ex: Rapport mensuel",
+            lblFinalFolder: "Emplacement de destination (Dossier ou Sous-dossier)",
+            lblDocDate: "Date",
+            lblDocFile: "Document (Word, Excel, PDF, Image...)",
+            lblDocDesc: "Description / Mots-clés",
+            docDescPlaceholder: "Détails optionnels...",
+            btnSubmitDoc: "Enregistrer dans les archives",
+            thTitle: "Titre",
+            thFolder: "Emplacement",
+            thDate: "Date",
+            thFile: "Fichier",
+            thDesc: "Description",
+            loadingText: "Chargement des archives depuis le cloud...",
+            emptyText: "Aucune archive pour le moment.",
+            subFolderSuccess: "Sous-dossier créé avec succès !",
+            subFolderExists: "Ce sous-dossier existe déjà.",
+            subFolderAlert: "Veuillez entrer un nom pour le sous-dossier.",
+            docTitleAlert: "Veuillez entrer un titre de document.",
+            docSuccessAlert: "Document archivé avec succès dans le cloud !",
+            docErrorAlert: "Erreur lors de l'enregistrement dans le cloud.",
+            noFile: "Aucun fichier"
+        },
+        en: {
+            pageTitle: "Archiving - Trust Handling Company",
+            mainTitle: "Archiving System - THC",
+            subFolderSectionTitle: "⚙️ Create a Sub-folder",
+            lblParentFolder: "Target Main Folder",
+            lblSubFolderName: "New Sub-folder Name",
+            subFolderPlaceholder: "Ex: January 2026, Invoices...",
+            btnAddSubFolder: "Add Sub-folder",
+            lblDocTitle: "Document Title",
+            docTitlePlaceholder: "Ex: Monthly report",
+            lblFinalFolder: "Destination Location (Folder or Sub-folder)",
+            lblDocDate: "Date",
+            lblDocFile: "Document (Word, Excel, PDF, Image...)",
+            lblDocDesc: "Description / Keywords",
+            docDescPlaceholder: "Optional details...",
+            btnSubmitDoc: "Save to Archives",
+            thTitle: "Title",
+            thFolder: "Location",
+            thDate: "Date",
+            thFile: "File",
+            thDesc: "Description",
+            loadingText: "Loading archives from the cloud...",
+            emptyText: "No archives yet.",
+            subFolderSuccess: "Sub-folder created successfully!",
+            subFolderExists: "This sub-folder already exists.",
+            subFolderAlert: "Please enter a name for the sub-folder.",
+            docTitleAlert: "Please enter a document title.",
+            docSuccessAlert: "Document successfully archived in the cloud!",
+            docErrorAlert: "Error saving to the cloud.",
+            noFile: "No file"
+        }
+    };
+
+    let currentLang = 'fr';
+
+    window.changeLanguage = function() {
+        currentLang = document.getElementById('langSelector').value;
+        const t = translations[currentLang];
+
+        document.getElementById('pageTitle').textContent = t.pageTitle;
+        document.getElementById('mainTitle').textContent = t.mainTitle;
+        document.getElementById('subFolderSectionTitle').textContent = t.subFolderSectionTitle;
+        document.getElementById('lblParentFolder').textContent = t.lblParentFolder;
+        document.getElementById('lblSubFolderName').textContent = t.lblSubFolderName;
+        document.getElementById('newSubFolderName').placeholder = t.subFolderPlaceholder;
+        document.getElementById('btnAddSubFolder').textContent = t.btnAddSubFolder;
+        document.getElementById('lblDocTitle').textContent = t.lblDocTitle;
+        document.getElementById('docTitle').placeholder = t.docTitlePlaceholder;
+        document.getElementById('lblFinalFolder').textContent = t.lblFinalFolder;
+        document.getElementById('lblDocDate').textContent = t.lblDocDate;
+        document.getElementById('lblDocFile').textContent = t.lblDocFile;
+        document.getElementById('lblDocDesc').textContent = t.lblDocDesc;
+        document.getElementById('docDesc').placeholder = t.docDescPlaceholder;
+        document.getElementById('btnSubmitDoc').textContent = t.btnSubmitDoc;
+        document.getElementById('thTitle').textContent = t.thTitle;
+        document.getElementById('thFolder').textContent = t.thFolder;
+        document.getElementById('thDate').textContent = t.thDate;
+        document.getElementById('thFile').textContent = t.thFile;
+        document.getElementById('thDesc').textContent = t.thDesc;
+        
+        const loadingEl = document.getElementById('loadingText');
+        if(loadingEl) loadingEl.textContent = t.loadingText;
+    }
+
     let folderStructure = {
         "Administration": [],
         "Comptabilité": [],
@@ -236,7 +354,6 @@
         "Rapport": []
     };
 
-    // Remplir les listes déroulantes
     window.updateAllSelects = function() {
         const parentSelect = document.getElementById('parentFolderSelect');
         const finalSelect = document.getElementById('finalFolderSelect');
@@ -275,11 +392,12 @@
     }
 
     window.addSubFolder = function() {
+        const t = translations[currentLang];
         const parent = document.getElementById('parentFolderSelect').value;
         const subName = document.getElementById('newSubFolderName').value.trim();
 
         if(!subName) {
-            alert("Veuillez entrer un nom pour le sous-dossier.");
+            alert(t.subFolderAlert);
             return;
         }
 
@@ -287,14 +405,14 @@
             folderStructure[parent].push(subName);
             document.getElementById('newSubFolderName').value = '';
             window.updateAllSelects();
-            alert(`Sous-dossier '${subName}' créé avec succès !`);
+            alert(t.subFolderSuccess);
         } else {
-            alert("Ce sous-dossier existe déjà.");
+            alert(t.subFolderExists);
         }
     }
 
-    // Enregistrer un document dans Firestore
     window.addDocument = async function() {
+        const t = translations[currentLang];
         const title = document.getElementById('docTitle').value;
         const finalFolder = document.getElementById('finalFolderSelect').value;
         const date = document.getElementById('docDate').value;
@@ -302,11 +420,11 @@
         const desc = document.getElementById('docDesc').value;
 
         if(!title) {
-            alert('Veuillez entrer un titre de document.');
+            alert(t.docTitleAlert);
             return;
         }
 
-        let fileName = 'Aucun fichier';
+        let fileName = t.noFile;
         if(fileInput.files && fileInput.files.length > 0) {
             fileName = fileInput.files[0].name;
         }
@@ -321,7 +439,7 @@
                 timestamp: new Date()
             });
 
-            alert('Document archivé avec succès dans le cloud public !');
+            alert(t.docSuccessAlert);
             
             document.getElementById('docTitle').value = '';
             document.getElementById('docFile').value = '';
@@ -329,20 +447,20 @@
             document.getElementById('docDate').value = '';
 
         } catch (error) {
-            console.error("Erreur lors de l'enregistrement : ", error);
-            alert("Erreur lors de l'enregistrement dans le cloud.");
+            console.error("Erreur : ", error);
+            alert(t.docErrorAlert);
         }
     }
 
-    // Charger et écouter les modifications du tableau en temps réel depuis Firestore
     function loadArchives() {
         const tbody = document.getElementById('archiveTableBody');
         
         onSnapshot(collection(db, "archives"), (snapshot) => {
             tbody.innerHTML = '';
+            const t = translations[currentLang];
             
             if (snapshot.empty) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #777;">Aucune archive pour le moment.</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #777;">${t.emptyText}</td></tr>`;
                 return;
             }
 
