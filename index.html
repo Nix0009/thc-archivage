@@ -142,6 +142,16 @@
             color: #1976d2;
             font-weight: bold;
         }
+        .btn-download {
+            background-color: #2e7d32;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 12px;
+            display: inline-block;
+        }
+        .btn-download:hover { background-color: #1b5e20; }
     </style>
 </head>
 <body>
@@ -221,10 +231,11 @@
                     <th id="thDate">Date</th>
                     <th id="thFile">Fichier</th>
                     <th id="thDesc">Description</th>
+                    <th id="thAction">Action</th>
                 </tr>
             </thead>
             <tbody id="archiveTableBody">
-                <tr><td colspan="5" id="loadingText" style="text-align: center; color: #777;">Chargement des archives depuis le cloud...</td></tr>
+                <tr><td colspan="6" id="loadingText" style="text-align: center; color: #777;">Chargement des archives depuis le cloud...</td></tr>
             </tbody>
         </table>
     </div>
@@ -233,7 +244,8 @@
 <!-- Importation de Firebase SDK (Version Modulaire 10) -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     // Votre configuration Firebase
     const firebaseConfig = {
@@ -248,6 +260,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
     // Dictionnaire de traduction
     const translations = {
@@ -272,15 +285,18 @@
             thDate: "Date",
             thFile: "Fichier",
             thDesc: "Description",
+            thAction: "Action",
             loadingText: "Chargement des archives depuis le cloud...",
             emptyText: "Aucune archive pour le moment.",
             subFolderSuccess: "Sous-dossier créé avec succès !",
             subFolderExists: "Ce sous-dossier existe déjà.",
             subFolderAlert: "Veuillez entrer un nom pour le sous-dossier.",
             docTitleAlert: "Veuillez entrer un titre de document.",
-            docSuccessAlert: "Document archivé avec succès dans le cloud !",
-            docErrorAlert: "Erreur lors de l'enregistrement dans le cloud.",
-            noFile: "Aucun fichier"
+            docSuccessAlert: "Document et fichier archivés avec succès !",
+            docErrorAlert: "Erreur lors de l'enregistrement.",
+            uploadingText: "Envoi du fichier en cours...",
+            noFile: "Aucun fichier",
+            downloadBtn: "📥 Télécharger"
         },
         en: {
             pageTitle: "Archiving - Trust Handling Company",
@@ -303,15 +319,18 @@
             thDate: "Date",
             thFile: "File",
             thDesc: "Description",
+            thAction: "Action",
             loadingText: "Loading archives from the cloud...",
             emptyText: "No archives yet.",
             subFolderSuccess: "Sub-folder created successfully!",
             subFolderExists: "This sub-folder already exists.",
             subFolderAlert: "Please enter a name for the sub-folder.",
             docTitleAlert: "Please enter a document title.",
-            docSuccessAlert: "Document successfully archived in the cloud!",
-            docErrorAlert: "Error saving to the cloud.",
-            noFile: "No file"
+            docSuccessAlert: "Document and file successfully archived!",
+            docErrorAlert: "Error saving.",
+            uploadingText: "Uploading file...",
+            noFile: "No file",
+            downloadBtn: "📥 Download"
         }
     };
 
@@ -341,6 +360,7 @@
         document.getElementById('thDate').textContent = t.thDate;
         document.getElementById('thFile').textContent = t.thFile;
         document.getElementById('thDesc').textContent = t.thDesc;
+        document.getElementById('thAction').textContent = t.thAction;
         
         const loadingEl = document.getElementById('loadingText');
         if(loadingEl) loadingEl.textContent = t.loadingText;
@@ -425,16 +445,27 @@
         }
 
         let fileName = t.noFile;
-        if(fileInput.files && fileInput.files.length > 0) {
-            fileName = fileInput.files[0].name;
-        }
+        let fileUrl = "";
+
+        const submitBtn = document.getElementById('btnSubmitDoc');
+        submitBtn.disabled = true;
+        submitBtn.textContent = t.uploadingText;
 
         try {
+            if(fileInput.files && fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                fileName = file.name;
+                const storageRef = ref(storage, 'documents/' + Date.now() + '_' + fileName);
+                const snapshot = await uploadBytes(storageRef, file);
+                fileUrl = await getDownloadURL(snapshot.ref);
+            }
+
             await addDoc(collection(db, "archives"), {
                 title: title,
                 folder: finalFolder,
                 date: date || '-',
                 fileName: fileName,
+                fileUrl: fileUrl,
                 desc: desc || '-',
                 timestamp: new Date()
             });
@@ -449,6 +480,9 @@
         } catch (error) {
             console.error("Erreur : ", error);
             alert(t.docErrorAlert);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = t.btnSubmitDoc;
         }
     }
 
@@ -460,19 +494,26 @@
             const t = translations[currentLang];
             
             if (snapshot.empty) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #777;">${t.emptyText}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #777;">${t.emptyText}</td></tr>`;
                 return;
             }
 
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 const row = document.createElement('tr');
+                
+                let actionHtml = '-';
+                if (data.fileUrl) {
+                    actionHtml = `<a href="${data.fileUrl}" target="_blank" class="btn-download">${t.downloadBtn}</a>`;
+                }
+
                 row.innerHTML = `
                     <td><strong>${data.title}</strong></td>
                     <td class="folder-cell">${data.folder}</td>
                     <td>${data.date}</td>
                     <td>${data.fileName}</td>
                     <td>${data.desc}</td>
+                    <td>${actionHtml}</td>
                 `;
                 tbody.appendChild(row);
             });
