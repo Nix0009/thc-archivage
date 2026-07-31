@@ -177,8 +177,9 @@
     </div>
 
     <div class="form-group">
-        <label for="docFile">Photo ou Fichier (Appareil photo / Galerie)</label>
-        <input type="file" id="docFile" accept="image/*,application/pdf" capture="environment">
+        <label for="docFile">Sélectionner un fichier (Word, Excel, PDF, Image...)</label>
+        <!-- MODIFICATION APPLIQUÉE ICI : Accepte Word, Excel, PDF, Images -->
+        <input type="file" id="docFile" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
     </div>
 
     <div class="form-group">
@@ -207,7 +208,7 @@
     </div>
 </div>
 
-<!-- Importation de Firebase SDK (Version Modulaire 9) -->
+<!-- Importation de Firebase SDK (Version Modulaire 10) -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -312,7 +313,6 @@
         }
 
         try {
-            // Envoi vers la collection 'archives' de Firestore
             await addDoc(collection(db, "archives"), {
                 title: title,
                 folder: finalFolder,
@@ -324,7 +324,6 @@
 
             alert('Document archivé avec succès dans le cloud public !');
             
-            // Réinitialisation du formulaire
             document.getElementById('docTitle').value = '';
             document.getElementById('docFile').value = '';
             document.getElementById('docDesc').value = '';
@@ -363,7 +362,6 @@
         });
     }
 
-    // Lancement initial
     window.updateAllSelects();
     loadArchives();
 </script>
