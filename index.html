@@ -99,7 +99,6 @@
         }
         .btn-primary { background-color: var(--primary-blue); }
         .btn-primary:hover { background-color: #0d47a1; }
-        .btn-primary:disabled { background-color: #90caf9; cursor: not-allowed; }
         
         .btn-secondary { background-color: var(--accent-color); }
         .btn-secondary:hover { background-color: #2c3e50; }
@@ -162,17 +161,6 @@
             border-top: 1px solid #eee;
             padding-top: 8px;
         }
-        .btn-download {
-            background-color: #2e7d32;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .btn-download:hover { background-color: #1b5e20; }
-
         .btn-delete {
             background-color: var(--primary-red);
             color: white;
@@ -258,7 +246,6 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDTfE06jD2NUS7-l5ynx0Iy-kFtg-8IzPw",
@@ -272,7 +259,6 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
     const translations = {
         fr: {
@@ -297,11 +283,9 @@
             subFolderExists: "Ce sous-dossier existe déjà.",
             subFolderAlert: "Veuillez entrer un nom pour le sous-dossier.",
             docTitleAlert: "Veuillez entrer un titre de document.",
-            docSuccessAlert: "Document et fichier archivés avec succès !",
-            docErrorAlert: "Erreur réseau : impossible d'envoyer le fichier. Vérifiez votre connexion.",
-            uploadingText: "Envoi du fichier en cours...",
+            docSuccessAlert: "Informations enregistrées avec succès !",
+            docErrorAlert: "Erreur lors de l'enregistrement.",
             noFile: "Aucun fichier",
-            downloadBtn: "📥 Télécharger",
             deleteBtn: "🗑️ Supprimer",
             confirmDelete: "Voulez-vous vraiment supprimer cette archive ?"
         },
@@ -327,11 +311,9 @@
             subFolderExists: "This sub-folder already exists.",
             subFolderAlert: "Please enter a name for the sub-folder.",
             docTitleAlert: "Please enter a document title.",
-            docSuccessAlert: "Document and file successfully archived!",
-            docErrorAlert: "Network error: could not upload file. Check your connection.",
-            uploadingText: "Uploading file...",
+            docSuccessAlert: "Information successfully saved!",
+            docErrorAlert: "Error while saving.",
             noFile: "No file",
-            downloadBtn: "📥 Download",
             deleteBtn: "🗑️ Delete",
             confirmDelete: "Are you sure you want to delete this archive?"
         }
@@ -443,28 +425,16 @@
         }
 
         let fileName = t.noFile;
-        let fileUrl = "";
-
-        const submitBtn = document.getElementById('btnSubmitDoc');
-        submitBtn.disabled = true;
-        submitBtn.textContent = t.uploadingText;
+        if(fileInput.files && fileInput.files.length > 0) {
+            fileName = fileInput.files[0].name; // Récupère uniquement le nom du fichier localement sans l'uploader
+        }
 
         try {
-            if(fileInput.files && fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                fileName = file.name;
-                const storageRef = ref(storage, 'documents/' + Date.now() + '_' + fileName);
-                
-                const snapshot = await uploadBytes(storageRef, file);
-                fileUrl = await getDownloadURL(snapshot.ref);
-            }
-
             await addDoc(collection(db, "archives"), {
                 title: title,
                 folder: finalFolder,
                 date: date || '-',
                 fileName: fileName,
-                fileUrl: fileUrl,
                 desc: desc || '-',
                 timestamp: new Date()
             });
@@ -479,9 +449,6 @@
         } catch (error) {
             console.error("Erreur : ", error);
             alert(t.docErrorAlert);
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = t.btnSubmitDoc;
         }
     }
 
@@ -516,9 +483,6 @@
                 card.className = 'archive-card';
                 
                 let actionsHtml = `<div class="archive-actions">`;
-                if (data.fileUrl) {
-                    actionsHtml += `<a href="${data.fileUrl}" target="_blank" class="btn-download">${t.downloadBtn}</a>`;
-                }
                 actionsHtml += `<button onclick="deleteArchive('${docId}')" class="btn-delete">${t.deleteBtn}</button>`;
                 actionsHtml += `</div>`;
 
