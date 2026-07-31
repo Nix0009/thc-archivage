@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Archivage - Trust Handling Company</title>
     <style>
         :root {
@@ -10,31 +10,32 @@
             --primary-blue: #1976d2;
             --dark-bg: #2c3e50;
             --light-bg: #f8f9fa;
+            --accent-color: #34495e;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--light-bg);
             margin: 0;
-            padding: 20px;
+            padding: 10px;
             color: #333;
         }
         .container {
             max-width: 1000px;
             margin: 0 auto;
             background: white;
-            padding: 30px;
+            padding: 15px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
         .logo-container {
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             background-color: var(--dark-bg);
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
         }
         .logo-container img {
-            max-height: 90px;
+            max-height: 70px;
             width: auto;
             display: block;
             margin: 0 auto;
@@ -42,30 +43,38 @@
         h1 {
             color: var(--dark-bg);
             text-align: center;
-            margin-bottom: 30px;
-            font-size: 24px;
-        }
-        .form-group {
             margin-bottom: 20px;
+            font-size: 20px;
+        }
+        .management-section {
+            background: #eee;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+        }
+        h2 { font-size: 16px; margin-top: 0; color: #444; }
+        .form-group {
+            margin-bottom: 15px;
         }
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: bold;
             color: #555;
+            font-size: 14px;
         }
-        input[type="text"], input[type="date"], select, textarea {
+        input[type="text"], input[type="date"], input[type="file"], select, textarea {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             border: 1px solid #ccc;
             border-radius: 6px;
             box-sizing: border-box;
             font-size: 14px;
         }
         button {
-            background-color: var(--primary-blue);
             color: white;
-            padding: 12px 20px;
+            padding: 12px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -74,54 +83,91 @@
             width: 100%;
             transition: background 0.3s;
         }
-        button:hover {
-            background-color: #0d47a1;
+        .btn-primary { background-color: var(--primary-blue); }
+        .btn-primary:hover { background-color: #0d47a1; }
+        
+        .btn-secondary { background-color: var(--accent-color); }
+        .btn-secondary:hover { background-color: #2c3e50; }
+
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .flex-col { flex: 1; min-width: 200px; }
+
+        @media(min-width: 600px) {
+            body { padding: 20px; }
+            .container { padding: 30px; }
+            h1 { font-size: 24px; }
+            h2 { font-size: 18px; }
+        }
+        
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 25px;
         }
         table {
             width: 100%;
-            margin-top: 30px;
             border-collapse: collapse;
+            min-width: 700px;
         }
         th, td {
             padding: 12px;
             border-bottom: 1px solid #ddd;
             text-align: left;
+            font-size: 13px;
         }
         th {
             background-color: var(--dark-bg);
             color: white;
         }
-        .folder-manager {
-            margin-bottom: 25px;
-            display: flex;
-            gap: 10px;
+        td.folder-cell {
+            font-family: monospace;
+            color: #1976d2;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- Logo avec votre lien -->
+    <!-- Logo -->
     <div class="logo-container">
         <img src="https://i.postimg.cc/yxxj5h9m/THC.png" alt="Logo Trust Handling Company">
     </div>
 
     <h1>Système d'Archivage - THC</h1>
 
-    <div class="folder-manager">
-        <input type="text" id="newFolderName" placeholder="Nom du nouveau dossier...">
-        <button onclick="addFolder()" style="width: auto;">Ajouter un dossier</button>
+    <!-- SECTION GESTION DES SOUS-DOSSIERS -->
+    <div class="management-section">
+        <h2>⚙️ Créer un sous-dossier</h2>
+        <div class="flex-row">
+            <div class="flex-col">
+                <label for="parentFolderSelect">Dossier Principal cible</label>
+                <select id="parentFolderSelect">
+                    <!-- Rempli automatiquement -->
+                </select>
+            </div>
+            <div class="flex-col">
+                <label for="newSubFolderName">Nom du nouveau sous-dossier</label>
+                <input type="text" id="newSubFolderName" placeholder="Ex: Janvier 2026, Factures Fournisseurs...">
+            </div>
+        </div>
+        <button onclick="addSubFolder()" class="btn-secondary" style="margin-top: 15px;">Ajouter le sous-dossier</button>
     </div>
 
+    <!-- FORMULAIRE D'ARCHIVAGE -->
     <div class="form-group">
         <label for="docTitle">Titre du document</label>
-        <input type="text" id="docTitle" placeholder="Ex: Rapport Annuel">
+        <input type="text" id="docTitle" placeholder="Ex: Rapport mensuel">
     </div>
 
     <div class="form-group">
-        <label for="docFolder">Dossier de destination</label>
-        <select id="docFolder">
-            <option value="Général">Général</option>
+        <label for="finalFolderSelect">Emplacement de destination (Dossier ou Sous-dossier)</label>
+        <select id="finalFolderSelect">
+            <!-- Rempli automatiquement -->
         </select>
     </div>
 
@@ -131,75 +177,148 @@
     </div>
 
     <div class="form-group">
-        <label for="docDesc">Description / Mots-clés</label>
-        <textarea id="docDesc" rows="3" placeholder="Ajoutez des détails..."></textarea>
+        <label for="docFile">Photo ou Fichier (Appareil photo / Galerie)</label>
+        <input type="file" id="docFile" accept="image/*,application/pdf" capture="environment">
     </div>
 
-    <button onclick="addDocument()">Enregistrer dans les archives</button>
+    <div class="form-group">
+        <label for="docDesc">Description / Mots-clés</label>
+        <textarea id="docDesc" rows="2" placeholder="Détails optionnels..."></textarea>
+    </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Titre</th>
-                <th>Dossier</th>
-                <th>Date</th>
-                <th>Description</th>
-            </tr>
-        </thead>
-        <tbody id="archiveTableBody">
-            <tr><td colspan="4" style="text-align: center; color: #777;">Aucune archive pour le moment.</td></tr>
-        </tbody>
-    </table>
+    <button onclick="addDocument()" class="btn-primary">Enregistrer dans les archives</button>
+
+    <!-- TABLEAU DES ARCHIVES -->
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th>Emplacement</th>
+                    <th>Date</th>
+                    <th>Fichier</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody id="archiveTableBody">
+                <tr><td colspan="5" style="text-align: center; color: #777;">Aucune archive pour le moment.</td></tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-    // Gère l'ajout dynamique de nouveaux dossiers dans la liste déroulante
-    function addFolder() {
-        const name = document.getElementById('newFolderName').value.trim();
-        if(name) {
-            const select = document.getElementById('docFolder');
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            select.appendChild(option);
-            document.getElementById('newFolderName').value = '';
-            alert('Dossier ajouté avec succès !');
-        } else {
-            alert("Veuillez entrer un nom de dossier valide.");
+    // Structure de départ avec vos 5 dossiers principaux exigés
+    let folderStructure = {
+        "Administration": [],
+        "Comptabilité": [],
+        "Audits": [],
+        "Contrats": [],
+        "Rapport": []
+    };
+
+    // Met à jour les listes déroulantes de l'application
+    function updateAllSelects() {
+        const parentSelect = document.getElementById('parentFolderSelect');
+        const finalSelect = document.getElementById('finalFolderSelect');
+        
+        const currentParent = parentSelect.value;
+        const currentFinal = finalSelect.value;
+
+        parentSelect.innerHTML = '';
+        finalSelect.innerHTML = '';
+
+        for (const mainFolder in folderStructure) {
+            // 1. Remplir le select des dossiers parents (pour y ajouter un sous-dossier)
+            const parentOption = document.createElement('option');
+            parentOption.value = mainFolder;
+            parentOption.textContent = mainFolder;
+            parentSelect.appendChild(parentOption);
+
+            // 2. Remplir le select de destination finale (pour classer un document)
+            // Option pour sélectionner le dossier principal lui-même
+            const mainOptionFinal = document.createElement('option');
+            mainOptionFinal.value = mainFolder;
+            mainOptionFinal.textContent = `📁 ${mainFolder}`;
+            finalSelect.appendChild(mainOptionFinal);
+
+            // Options pour chaque sous-dossier rattaché à ce dossier principal
+            folderStructure[mainFolder].forEach(subFolder => {
+                const subOption = document.createElement('option');
+                subOption.value = `${mainFolder} / ${subFolder}`;
+                subOption.textContent = `   └─ ${subFolder}`;
+                finalSelect.appendChild(subOption);
+            });
         }
+
+        parentSelect.value = currentParent;
+        finalSelect.value = currentFinal;
     }
 
-    // Gère l'ajout d'un nouveau document dans le tableau d'archives
+    // Action pour ajouter un sous-dossier dans un dossier principal
+    function addSubFolder() {
+        const parent = document.getElementById('parentFolderSelect').value;
+        const subName = document.getElementById('newSubFolderName').value.trim();
+
+        if(!subName) {
+            alert("Veuillez entrer un nom pour le sous-dossier.");
+            return;
+        }
+
+        if(folderStructure[parent].includes(subName)) {
+            alert("Ce sous-dossier existe déjà dans ce dossier principal.");
+            return;
+        }
+
+        folderStructure[parent].push(subName);
+        document.getElementById('newSubFolderName').value = '';
+        updateAllSelects();
+        alert(`Sous-dossier '${subName}' créé avec succès dans '${parent}' !`);
+    }
+
+    // Action pour archiver un document
     function addDocument() {
         const title = document.getElementById('docTitle').value;
-        const folder = document.getElementById('docFolder').value;
+        const finalFolder = document.getElementById('finalFolderSelect').value;
         const date = document.getElementById('docDate').value;
+        const fileInput = document.getElementById('docFile');
         const desc = document.getElementById('docDesc').value;
 
-        // Validation du titre
         if(!title) {
             alert('Veuillez entrer un titre de document.');
             return;
         }
 
+        let fileName = 'Aucun fichier';
+        if(fileInput.files && fileInput.files.length > 0) {
+            fileName = fileInput.files[0].name;
+        }
+
         const tbody = document.getElementById('archiveTableBody');
-        
-        // Supprime le message "Aucune archive" si c'est la première entrée
         if(tbody.innerHTML.includes('Aucune archive')) {
             tbody.innerHTML = '';
         }
 
-        // Crée la nouvelle ligne
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${title}</td><td>${folder}</td><td>${date || '-'}</td><td>${desc || '-'}</td>`;
+        row.innerHTML = `
+            <td><strong>${title}</strong></td>
+            <td class="folder-cell">${finalFolder}</td>
+            <td>${date || '-'}</td>
+            <td>${fileName}</td>
+            <td>${desc || '-'}</td>
+        `;
         tbody.appendChild(row);
 
-        // Réinitialise le formulaire
+        // Réinitialisation partielle du formulaire (garde le titre/dossier optionnel si besoin, nettoie fichier)
         document.getElementById('docTitle').value = '';
+        document.getElementById('docFile').value = '';
         document.getElementById('docDesc').value = '';
         document.getElementById('docDate').value = '';
         alert('Document archivé avec succès !');
     }
+
+    // Initialisation au chargement de la page
+    updateAllSelects();
 </script>
 
 </body>
