@@ -78,7 +78,7 @@
             color: #555;
             font-size: 14px;
         }
-        input[type="text"], input[type="date"], input[type="file"], select, textarea {
+        input[type="text"], input[type="date"], select, textarea {
             width: 100%;
             padding: 10px;
             border: 1px solid #ccc;
@@ -86,6 +86,36 @@
             box-sizing: border-box;
             font-size: 14px;
         }
+        
+        /* Zone de Glisser-Déposer (Drag and Drop) */
+        .drop-zone {
+            border: 2px dashed #1976d2;
+            border-radius: 8px;
+            background: #f0f7ff;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .drop-zone.dragover {
+            background: #e1f5fe;
+            border-color: #0d47a1;
+        }
+        .drop-zone-text {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .drop-zone input[type="file"] {
+            display: none;
+        }
+        .file-info-display {
+            margin-top: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #1976d2;
+        }
+
         button {
             color: white;
             padding: 12px;
@@ -226,9 +256,14 @@
         <input type="date" id="docDate">
     </div>
 
+    <!-- Zone de Glisser-Déposer / Sélection de fichier -->
     <div class="form-group">
-        <label id="lblDocFile" for="docFile">Document (Word, Excel, PDF, Image...)</label>
-        <input type="file" id="docFile" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <label id="lblDocFile" for="docFile">Document (Glissez-déposez ou cliquez)</label>
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-text" id="dropZoneText">📁 Glissez et déposez votre fichier ici, ou cliquez pour parcourir</div>
+            <input type="file" id="docFile" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            <div class="file-info-display" id="fileInfoDisplay"></div>
+        </div>
     </div>
 
     <div class="form-group">
@@ -238,8 +273,11 @@
 
     <button id="btnSubmitDoc" onclick="addDocument()" class="btn-primary">Enregistrer dans les archives</button>
 
-    <div id="archivesList" class="archives-container">
-        <div class="no-archive" id="loadingText">Chargement des archives depuis le cloud...</div>
+    <div class="archives-container">
+        <h2 id="listArchivesTitle">📂 Liste des fichiers archivés</h2>
+        <div id="archivesList">
+            <div class="no-archive" id="loadingText">Chargement des archives depuis le cloud...</div>
+        </div>
     </div>
 </div>
 
@@ -274,16 +312,18 @@
             lblFinalFolder: "Emplacement de destination (Dossier ou Sous-dossier)",
             lblDocDate: "Date",
             lblDocFile: "Document (Word, Excel, PDF, Image...)",
+            dropZoneText: "📁 Glissez et déposez votre fichier ici, ou cliquez pour parcourir",
             lblDocDesc: "Description / Mots-clés",
             docDescPlaceholder: "Détails optionnels...",
             btnSubmitDoc: "Enregistrer dans les archives",
+            listArchivesTitle: "📂 Liste des fichiers archivés",
             loadingText: "Chargement des archives depuis le cloud...",
             emptyText: "Aucune archive pour le moment.",
             subFolderSuccess: "Sous-dossier créé avec succès !",
             subFolderExists: "Ce sous-dossier existe déjà.",
             subFolderAlert: "Veuillez entrer un nom pour le sous-dossier.",
             docTitleAlert: "Veuillez entrer un titre de document.",
-            docSuccessAlert: "Informations enregistrées avec succès !",
+            docSuccessAlert: "Nom du fichier et informations enregistrés avec succès !",
             docErrorAlert: "Erreur lors de l'enregistrement.",
             noFile: "Aucun fichier",
             deleteBtn: "🗑️ Supprimer",
@@ -302,16 +342,18 @@
             lblFinalFolder: "Destination Location (Folder or Sub-folder)",
             lblDocDate: "Date",
             lblDocFile: "Document (Word, Excel, PDF, Image...)",
+            dropZoneText: "📁 Drag and drop your file here, or click to browse",
             lblDocDesc: "Description / Keywords",
             docDescPlaceholder: "Optional details...",
             btnSubmitDoc: "Save to Archives",
+            listArchivesTitle: "📂 List of Archived Files",
             loadingText: "Loading archives from the cloud...",
             emptyText: "No archives yet.",
             subFolderSuccess: "Sub-folder created successfully!",
             subFolderExists: "This sub-folder already exists.",
             subFolderAlert: "Please enter a name for the sub-folder.",
             docTitleAlert: "Please enter a document title.",
-            docSuccessAlert: "Information successfully saved!",
+            docSuccessAlert: "File name and information successfully saved!",
             docErrorAlert: "Error while saving.",
             noFile: "No file",
             deleteBtn: "🗑️ Delete",
@@ -320,6 +362,7 @@
     };
 
     let currentLang = 'fr';
+    let selectedFileObject = null;
 
     window.changeLanguage = function() {
         currentLang = document.getElementById('langSelector').value;
@@ -337,13 +380,47 @@
         document.getElementById('lblFinalFolder').textContent = t.lblFinalFolder;
         document.getElementById('lblDocDate').textContent = t.lblDocDate;
         document.getElementById('lblDocFile').textContent = t.lblDocFile;
+        document.getElementById('dropZoneText').textContent = t.dropZoneText;
         document.getElementById('lblDocDesc').textContent = t.lblDocDesc;
         document.getElementById('docDesc').placeholder = t.docDescPlaceholder;
         document.getElementById('btnSubmitDoc').textContent = t.btnSubmitDoc;
+        document.getElementById('listArchivesTitle').textContent = t.listArchivesTitle;
         
         const loadingEl = document.getElementById('loadingText');
-        if(loadingEl) loadingEl.textContent = t.loadingText;
+        if(loadingEl && loadingEl.classList.contains('no-archive')) loadingEl.textContent = t.emptyText;
     }
+
+    // Gestion du Drag and Drop & Sélection de fichier
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('docFile');
+    const fileInfoDisplay = document.getElementById('fileInfoDisplay');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            selectedFileObject = e.target.files[0];
+            fileInfoDisplay.textContent = `📎 Fichier sélectionné : ${selectedFileObject.name}`;
+        }
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            selectedFileObject = e.dataTransfer.files[0];
+            fileInfoDisplay.textContent = `📎 Fichier sélectionné : ${selectedFileObject.name}`;
+        }
+    });
 
     let folderStructure = {
         "Administration": [],
@@ -416,7 +493,6 @@
         const title = document.getElementById('docTitle').value;
         const finalFolder = document.getElementById('finalFolderSelect').value;
         const date = document.getElementById('docDate').value;
-        const fileInput = document.getElementById('docFile');
         const desc = document.getElementById('docDesc').value;
 
         if(!title) {
@@ -425,8 +501,8 @@
         }
 
         let fileName = t.noFile;
-        if(fileInput.files && fileInput.files.length > 0) {
-            fileName = fileInput.files[0].name; // Récupère uniquement le nom du fichier localement sans l'uploader
+        if(selectedFileObject) {
+            fileName = selectedFileObject.name; // Récupère uniquement le nom du fichier sans l'uploader
         }
 
         try {
@@ -442,9 +518,11 @@
             alert(t.docSuccessAlert);
             
             document.getElementById('docTitle').value = '';
-            document.getElementById('docFile').value = '';
             document.getElementById('docDesc').value = '';
             document.getElementById('docDate').value = '';
+            fileInput.value = '';
+            selectedFileObject = null;
+            fileInfoDisplay.textContent = '';
 
         } catch (error) {
             console.error("Erreur : ", error);
@@ -472,7 +550,7 @@
             const t = translations[currentLang];
             
             if (snapshot.empty) {
-                container.innerHTML = `<div class="no-archive">${t.emptyText}</div>`;
+                container.innerHTML = `<div class="no-archive" id="loadingText">${t.emptyText}</div>`;
                 return;
             }
 
