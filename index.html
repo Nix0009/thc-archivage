@@ -220,6 +220,7 @@
             cursor: pointer;
             font-size: 12px;
             font-weight: bold;
+            flex: 1;
         }
         .btn-delete:hover { background-color: #b71c1c; }
         .no-archive {
@@ -392,7 +393,7 @@
 
     let currentLang = 'fr';
     let selectedFileObject = null;
-    let editingDocId = null; // Variable pour suivre l'ID en cours de modification
+    let editingDocId = null;
 
     window.changeLanguage = function() {
         currentLang = document.getElementById('langSelector').value;
@@ -423,7 +424,6 @@
         if(loadingEl && loadingEl.classList.contains('no-archive')) loadingEl.textContent = t.emptyText;
     }
 
-    // Gestion du Drag and Drop & Sélection de fichier
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('docFile');
     const fileInfoDisplay = document.getElementById('fileInfoDisplay');
@@ -535,7 +535,6 @@
 
         try {
             if (editingDocId) {
-                // Mode Mise à jour
                 const docRef = doc(db, "archives", editingDocId);
                 const updateData = {
                     title: title,
@@ -551,7 +550,6 @@
                 alert(t.docUpdateAlert);
                 cancelEdit();
             } else {
-                // Mode Ajout
                 let fileName = t.noFile;
                 if(selectedFileObject) {
                     fileName = selectedFileObject.name;
@@ -643,8 +641,15 @@
                 const card = document.createElement('div');
                 card.className = 'archive-card';
                 
+                // Échappements sécurisés pour éviter les bugs avec les guillemets dans les titres/descriptions
+                const safeTitle = (data.title || '').replace(/'/g, "\\'");
+                const safeFolder = (data.folder || '').replace(/'/g, "\\'");
+                const safeDate = (data.date || '').replace(/'/g, "\\'");
+                const safeFileName = (data.fileName || '').replace(/'/g, "\\'");
+                const safeDesc = (data.desc || '').replace(/'/g, "\\'");
+
                 let actionsHtml = `<div class="archive-actions">`;
-                actionsHtml += `<button onclick="editArchive('${docId}', '${data.title.replace(/'/g, "\\'")}', '${data.folder}', '${data.date}', '${data.fileName}', '${data.desc.replace(/'/g, "\\'")}')" class="btn-edit">${t.editBtn}</button>`;
+                actionsHtml += `<button onclick="editArchive('${docId}', '${safeTitle}', '${safeFolder}', '${safeDate}', '${safeFileName}', '${safeDesc}')" class="btn-edit">${t.editBtn}</button>`;
                 actionsHtml += `<button onclick="deleteArchive('${docId}')" class="btn-delete">${t.deleteBtn}</button>`;
                 actionsHtml += `</div>`;
 
