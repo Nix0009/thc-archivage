@@ -88,7 +88,6 @@
             font-size: 14px;
         }
         
-        /* Barre de recherche mise en valeur */
         .search-box-container {
             margin-bottom: 15px;
         }
@@ -109,7 +108,6 @@
             box-shadow: 0 0 5px rgba(25, 118, 210, 0.3);
         }
 
-        /* Zone de Glisser-Déposer (Drag and Drop) */
         .drop-zone {
             border: 2px dashed #1976d2;
             border-radius: 8px;
@@ -213,6 +211,17 @@
             color: #555;
             margin-bottom: 10px;
         }
+        .file-badge {
+            display: inline-block;
+            background: #f1f2f6;
+            color: #2f3640;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 5px;
+            border: 1px solid #dcdde1;
+        }
         .archive-actions {
             display: flex;
             gap: 8px;
@@ -297,12 +306,11 @@
         <input type="date" id="docDate">
     </div>
 
-    <!-- Zone de Glisser-Déposer / Sélection de fichier -->
     <div class="form-group">
         <label id="lblDocFile" for="docFile">Document (Glissez-déposez ou cliquez)</label>
         <div class="drop-zone" id="dropZone">
             <div class="drop-zone-text" id="dropZoneText">📁 Glissez et déposez votre fichier ici, ou cliquez pour parcourir</div>
-            <input type="file" id="docFile" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            <input type="file" id="docFile" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation">
             <div class="file-info-display" id="fileInfoDisplay"></div>
         </div>
     </div>
@@ -318,9 +326,8 @@
     <div class="archives-container">
         <h2 id="listArchivesTitle">📂 Liste des fichiers archivés</h2>
         
-        <!-- Barre de recherche bien visible -->
         <div class="search-box-container">
-            <input type="text" id="searchInput" class="search-input-styled" oninput="filterArchives()" placeholder="🔍 Rechercher par titre, dossier, nom de fichier ou description...">
+            <input type="text" id="searchInput" class="search-input-styled" oninput="filterArchives()" placeholder="🔍 Rechercher par titre, dossier, type, nom de fichier ou description...">
         </div>
 
         <div id="archivesList">
@@ -367,7 +374,7 @@
             btnUpdateDoc: "Mettre à jour l'archive",
             btnCancelEdit: "Annuler la modification",
             listArchivesTitle: "📂 Liste des fichiers archivés",
-            searchPlaceholder: "🔍 Rechercher par titre, dossier, nom de fichier ou description...",
+            searchPlaceholder: "🔍 Rechercher par titre, dossier, type, nom de fichier ou description...",
             loadingText: "Chargement des archives depuis le cloud...",
             emptyText: "Aucune archive pour le moment.",
             noSearchResult: "Aucun résultat trouvé pour votre recherche.",
@@ -403,7 +410,7 @@
             btnUpdateDoc: "Update Archive",
             btnCancelEdit: "Cancel Editing",
             listArchivesTitle: "📂 List of Archived Files",
-            searchPlaceholder: "🔍 Search by title, folder, file name or description...",
+            searchPlaceholder: "🔍 Search by title, folder, file type, file name or description...",
             loadingText: "Loading archives from the cloud...",
             emptyText: "No archives yet.",
             noSearchResult: "No results found for your search.",
@@ -426,13 +433,28 @@
     let editingDocId = null;
     let allArchivesData = [];
 
-    // Fonction utilitaire pour formater la taille des fichiers
     function formatFileSize(bytes) {
         if (!bytes || bytes === 0) return '';
         const k = 1024;
         const sizes = ['octets', 'Ko', 'Mo', 'Go'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function getFileTypeCategory(filename) {
+        if (!filename) return "Autre";
+        const ext = filename.split('.').pop().toLowerCase();
+        
+        if (['pdf'].includes(ext)) return "PDF";
+        if (['doc', 'docx'].includes(ext)) return "Word";
+        if (['xls', 'xlsx', 'csv'].includes(ext)) return "Excel";
+        if (['ppt', 'pptx'].includes(ext)) return "PowerPoint";
+        if (['jpg', 'jpeg'].includes(ext)) return "JPEG";
+        if (['png'].includes(ext)) return "PNG";
+        if (['gif', 'webp', 'svg'].includes(ext)) return "Image";
+        if (['txt'].includes(ext)) return "Texte";
+        if (['zip', 'rar', '7z'].includes(ext)) return "Archive (ZIP)";
+        return ext.toUpperCase();
     }
 
     window.changeLanguage = function() {
@@ -474,7 +496,8 @@
         if (e.target.files.length > 0) {
             selectedFileObject = e.target.files[0];
             const sizeStr = formatFileSize(selectedFileObject.size);
-            fileInfoDisplay.textContent = `📎 Fichier : ${selectedFileObject.name} (${sizeStr})`;
+            const typeStr = getFileTypeCategory(selectedFileObject.name);
+            fileInfoDisplay.textContent = `📎 [${typeStr}] ${selectedFileObject.name} (${sizeStr})`;
         }
     });
 
@@ -493,7 +516,8 @@
         if (e.dataTransfer.files.length > 0) {
             selectedFileObject = e.dataTransfer.files[0];
             const sizeStr = formatFileSize(selectedFileObject.size);
-            fileInfoDisplay.textContent = `📎 Fichier : ${selectedFileObject.name} (${sizeStr})`;
+            const typeStr = getFileTypeCategory(selectedFileObject.name);
+            fileInfoDisplay.textContent = `📎 [${typeStr}] ${selectedFileObject.name} (${sizeStr})`;
         }
     });
 
@@ -587,6 +611,7 @@
                 if (selectedFileObject) {
                     updateData.fileName = selectedFileObject.name;
                     updateData.fileSize = formatFileSize(selectedFileObject.size);
+                    updateData.fileType = getFileTypeCategory(selectedFileObject.name);
                 }
 
                 await updateDoc(docRef, updateData);
@@ -595,9 +620,11 @@
             } else {
                 let fileName = t.noFile;
                 let fileSize = '';
+                let fileType = '-';
                 if(selectedFileObject) {
                     fileName = selectedFileObject.name;
                     fileSize = formatFileSize(selectedFileObject.size);
+                    fileType = getFileTypeCategory(selectedFileObject.name);
                 }
 
                 await addDoc(collection(db, "archives"), {
@@ -606,6 +633,7 @@
                     date: date || '-',
                     fileName: fileName,
                     fileSize: fileSize,
+                    fileType: fileType,
                     desc: desc || '-',
                     timestamp: new Date()
                 });
@@ -619,7 +647,7 @@
         }
     }
 
-    window.editArchive = function(id, title, folder, date, fileName, fileSize, desc) {
+    window.editArchive = function(id, title, folder, date, fileName, fileSize, fileType, desc) {
         editingDocId = id;
         document.getElementById('docTitle').value = title;
         document.getElementById('finalFolderSelect').value = folder;
@@ -627,7 +655,7 @@
         document.getElementById('docDesc').value = desc !== '-' ? desc : '';
         
         if (fileName && fileName !== translations[currentLang].noFile) {
-            fileInfoDisplay.textContent = `📎 Fichier actuel : ${fileName} ${fileSize ? '('+fileSize+')' : ''} - Remplacez si besoin`;
+            fileInfoDisplay.textContent = `📎 [${fileType || 'Fichier'}] ${fileName} ${fileSize ? '('+fileSize+')' : ''} - Remplacez si besoin`;
         } else {
             fileInfoDisplay.textContent = '';
         }
@@ -690,15 +718,17 @@
             const safeDate = (item.date || '').replace(/'/g, "\\'");
             const safeFileName = (item.fileName || '').replace(/'/g, "\\'");
             const safeFileSize = (item.fileSize || '').replace(/'/g, "\\'");
+            const safeFileType = (item.fileType || getFileTypeCategory(item.fileName)).replace(/'/g, "\\'");
             const safeDesc = (item.desc || '').replace(/'/g, "\\'");
 
+            const computedType = item.fileType || getFileTypeCategory(item.fileName);
             let fileDisplayStr = item.fileName || t.noFile;
             if (item.fileSize) {
                 fileDisplayStr += ` (${item.fileSize})`;
             }
 
             let actionsHtml = `<div class="archive-actions">`;
-            actionsHtml += `<button onclick="editArchive('${item.id}', '${safeTitle}', '${safeFolder}', '${safeDate}', '${safeFileName}', '${safeFileSize}', '${safeDesc}')" class="btn-edit">${t.editBtn}</button>`;
+            actionsHtml += `<button onclick="editArchive('${item.id}', '${safeTitle}', '${safeFolder}', '${safeDate}', '${safeFileName}', '${safeFileSize}', '${safeFileType}', '${safeDesc}')" class="btn-edit">${t.editBtn}</button>`;
             actionsHtml += `<button onclick="deleteArchive('${item.id}')" class="btn-delete">${t.deleteBtn}</button>`;
             actionsHtml += `</div>`;
 
@@ -709,7 +739,7 @@
                 </div>
                 <div class="archive-details">
                     <div>📅 Date : ${item.date}</div>
-                    <div>📎 Fichier : ${fileDisplayStr}</div>
+                    <div>📎 Fichier : <span class="file-badge">${computedType}</span> ${fileDisplayStr}</div>
                     <div>📝 Description : ${item.desc}</div>
                 </div>
                 ${actionsHtml}
@@ -726,10 +756,12 @@
         }
 
         const filtered = allArchivesData.filter(item => {
+            const fType = (item.fileType || getFileTypeCategory(item.fileName)).toLowerCase();
             return (
                 (item.title && item.title.toLowerCase().includes(query)) ||
                 (item.folder && item.folder.toLowerCase().includes(query)) ||
                 (item.fileName && item.fileName.toLowerCase().includes(query)) ||
+                (fType.includes(query)) ||
                 (item.fileSize && item.fileSize.toLowerCase().includes(query)) ||
                 (item.desc && item.desc.toLowerCase().includes(query)) ||
                 (item.date && item.date.toLowerCase().includes(query))
