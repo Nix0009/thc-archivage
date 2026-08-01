@@ -426,6 +426,15 @@
     let editingDocId = null;
     let allArchivesData = [];
 
+    // Fonction utilitaire pour formater la taille des fichiers
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '';
+        const k = 1024;
+        const sizes = ['octets', 'Ko', 'Mo', 'Go'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
     window.changeLanguage = function() {
         currentLang = document.getElementById('langSelector').value;
         const t = translations[currentLang];
@@ -464,7 +473,8 @@
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
             selectedFileObject = e.target.files[0];
-            fileInfoDisplay.textContent = `📎 Fichier sélectionné : ${selectedFileObject.name}`;
+            const sizeStr = formatFileSize(selectedFileObject.size);
+            fileInfoDisplay.textContent = `📎 Fichier : ${selectedFileObject.name} (${sizeStr})`;
         }
     });
 
@@ -482,7 +492,8 @@
         dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length > 0) {
             selectedFileObject = e.dataTransfer.files[0];
-            fileInfoDisplay.textContent = `📎 Fichier sélectionné : ${selectedFileObject.name}`;
+            const sizeStr = formatFileSize(selectedFileObject.size);
+            fileInfoDisplay.textContent = `📎 Fichier : ${selectedFileObject.name} (${sizeStr})`;
         }
     });
 
@@ -575,6 +586,7 @@
                 };
                 if (selectedFileObject) {
                     updateData.fileName = selectedFileObject.name;
+                    updateData.fileSize = formatFileSize(selectedFileObject.size);
                 }
 
                 await updateDoc(docRef, updateData);
@@ -582,8 +594,10 @@
                 cancelEdit();
             } else {
                 let fileName = t.noFile;
+                let fileSize = '';
                 if(selectedFileObject) {
                     fileName = selectedFileObject.name;
+                    fileSize = formatFileSize(selectedFileObject.size);
                 }
 
                 await addDoc(collection(db, "archives"), {
@@ -591,6 +605,7 @@
                     folder: finalFolder,
                     date: date || '-',
                     fileName: fileName,
+                    fileSize: fileSize,
                     desc: desc || '-',
                     timestamp: new Date()
                 });
@@ -604,7 +619,7 @@
         }
     }
 
-    window.editArchive = function(id, title, folder, date, fileName, desc) {
+    window.editArchive = function(id, title, folder, date, fileName, fileSize, desc) {
         editingDocId = id;
         document.getElementById('docTitle').value = title;
         document.getElementById('finalFolderSelect').value = folder;
@@ -612,7 +627,7 @@
         document.getElementById('docDesc').value = desc !== '-' ? desc : '';
         
         if (fileName && fileName !== translations[currentLang].noFile) {
-            fileInfoDisplay.textContent = `📎 Fichier actuel : ${fileName} (Remplacez si besoin)`;
+            fileInfoDisplay.textContent = `📎 Fichier actuel : ${fileName} ${fileSize ? '('+fileSize+')' : ''} - Remplacez si besoin`;
         } else {
             fileInfoDisplay.textContent = '';
         }
@@ -674,10 +689,16 @@
             const safeFolder = (item.folder || '').replace(/'/g, "\\'");
             const safeDate = (item.date || '').replace(/'/g, "\\'");
             const safeFileName = (item.fileName || '').replace(/'/g, "\\'");
+            const safeFileSize = (item.fileSize || '').replace(/'/g, "\\'");
             const safeDesc = (item.desc || '').replace(/'/g, "\\'");
 
+            let fileDisplayStr = item.fileName || t.noFile;
+            if (item.fileSize) {
+                fileDisplayStr += ` (${item.fileSize})`;
+            }
+
             let actionsHtml = `<div class="archive-actions">`;
-            actionsHtml += `<button onclick="editArchive('${item.id}', '${safeTitle}', '${safeFolder}', '${safeDate}', '${safeFileName}', '${safeDesc}')" class="btn-edit">${t.editBtn}</button>`;
+            actionsHtml += `<button onclick="editArchive('${item.id}', '${safeTitle}', '${safeFolder}', '${safeDate}', '${safeFileName}', '${safeFileSize}', '${safeDesc}')" class="btn-edit">${t.editBtn}</button>`;
             actionsHtml += `<button onclick="deleteArchive('${item.id}')" class="btn-delete">${t.deleteBtn}</button>`;
             actionsHtml += `</div>`;
 
@@ -688,7 +709,7 @@
                 </div>
                 <div class="archive-details">
                     <div>📅 Date : ${item.date}</div>
-                    <div>📎 Fichier : ${item.fileName || t.noFile}</div>
+                    <div>📎 Fichier : ${fileDisplayStr}</div>
                     <div>📝 Description : ${item.desc}</div>
                 </div>
                 ${actionsHtml}
@@ -709,6 +730,7 @@
                 (item.title && item.title.toLowerCase().includes(query)) ||
                 (item.folder && item.folder.toLowerCase().includes(query)) ||
                 (item.fileName && item.fileName.toLowerCase().includes(query)) ||
+                (item.fileSize && item.fileSize.toLowerCase().includes(query)) ||
                 (item.desc && item.desc.toLowerCase().includes(query)) ||
                 (item.date && item.date.toLowerCase().includes(query))
             );
