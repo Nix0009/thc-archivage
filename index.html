@@ -149,6 +149,7 @@
         }
         .btn-primary { background-color: var(--primary-blue); }
         .btn-primary:hover { background-color: #0d47a1; }
+        .btn-primary:disabled { background-color: #90caf9; cursor: not-allowed; }
         
         .btn-secondary { background-color: var(--accent-color); }
         .btn-secondary:hover { background-color: #2c3e50; }
@@ -222,6 +223,14 @@
             margin-right: 5px;
             border: 1px solid #dcdde1;
         }
+        .file-link {
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .file-link:hover { text-decoration: underline; }
+
         .archive-actions {
             display: flex;
             gap: 8px;
@@ -339,6 +348,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDTfE06jD2NUS7-l5ynx0Iy-kFtg-8IzPw",
@@ -352,6 +362,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
     const translations = {
         fr: {
@@ -385,7 +396,9 @@
             docSuccessAlert: "Archive enregistrée avec succès !",
             docUpdateAlert: "Archive mise à jour avec succès !",
             docErrorAlert: "Erreur lors de l'enregistrement.",
+            uploadingText: "⏳ Upload du fichier en cours...",
             noFile: "Aucun fichier",
+            downloadFile: "📥 Télécharger",
             editBtn: "✏️ Modifier",
             deleteBtn: "🗑️ Supprimer",
             confirmDelete: "Voulez-vous vraiment supprimer cette archive ?"
@@ -421,7 +434,9 @@
             docSuccessAlert: "Archive successfully saved!",
             docUpdateAlert: "Archive successfully updated!",
             docErrorAlert: "Error while saving.",
+            uploadingText: "⏳ Uploading file...",
             noFile: "No file",
+            downloadFile: "📥 Download",
             editBtn: "✏️ Edit",
             deleteBtn: "🗑️ Delete",
             confirmDelete: "Are you sure you want to delete this archive?"
@@ -481,7 +496,9 @@
         document.getElementById('searchInput').placeholder = t.searchPlaceholder;
         
         const submitBtn = document.getElementById('btnSubmitDoc');
-        submitBtn.textContent = editingDocId ? t.btnUpdateDoc : t.btnSubmitDoc;
+        if (!submitBtn.disabled) {
+            submitBtn.textContent = editingDocId ? t.btnUpdateDoc : t.btnSubmitDoc;
+        }
 
         renderArchives(allArchivesData);
     }
@@ -593,13 +610,33 @@
         const finalFolder = document.getElementById('finalFolderSelect').value;
         const date = document.getElementById('docDate').value;
         const desc = document.getElementById('docDesc').value;
+        const submitBtn = document.getElementById('btnSubmitDoc');
 
         if(!title) {
             alert(t.docTitleAlert);
             return;
         }
 
+        submitBtn.disabled = true;
+        submitBtn.textContent = t.uploadingText;
+
         try {
+            let fileUrl = '';
+            let fileName = '';
+            let fileSize = '';
+            let fileType = '';
+
+            // Si un nouveau fichier est sélectionné, on l'uploade sur Firebase Storage
+            if (selectedFileObject) {
+                const storageRef = ref(storage, 'archives/' + Date.now() + '_' + selectedFileObject.name);
+                const snapshot = await uploadBytes(storageRef, selectedFileObject);
+                fileUrl = await getDownloadURL(snapshot.ref);
+                
+                fileName = selectedFileObject.name;
+                fileSize = formatFileSize(selectedFileObject.size);
+                fileType = getFileTypeCategory(selectedFileObject.name);
+            }
+
             if (editingDocId) {
                 const docRef = doc(db, "archives", editingDocId);
                 const updateData = {
@@ -608,32 +645,26 @@
                     date: date || '-',
                     desc: desc || '-'
                 };
+                
                 if (selectedFileObject) {
-                    updateData.fileName = selectedFileObject.name;
-                    updateData.fileSize = formatFileSize(selectedFileObject.size);
-                    updateData.fileType = getFileTypeCategory(selectedFileObject.name);
+                    updateData.fileName = fileName;
+                    updateData.fileSize = fileSize;
+                    updateData.fileType = fileType;
+                    updateData.fileUrl = fileUrl;
                 }
 
                 await updateDoc(docRef, updateData);
                 alert(t.docUpdateAlert);
                 cancelEdit();
             } else {
-                let fileName = t.noFile;
-                let fileSize = '';
-                let fileType = '-';
-                if(selectedFileObject) {
-                    fileName = selectedFileObject.name;
-                    fileSize = formatFileSize(selectedFileObject.size);
-                    fileType = getFileTypeCategory(selectedFileObject.name);
-                }
-
                 await addDoc(collection(db, "archives"), {
                     title: title,
                     folder: finalFolder,
                     date: date || '-',
-                    fileName: fileName,
-                    fileSize: fileSize,
-                    fileType: fileType,
+                    fileName: selectedFileObject ? fileName : t.noFile,
+                    fileSize: selectedFileObject ? fileSize : '',
+                    fileType: selectedFileObject ? fileType : '-',
+                    fileUrl: fileUrl || '',
                     desc: desc || '-',
                     timestamp: new Date()
                 });
@@ -643,7 +674,10 @@
             }
         } catch (error) {
             console.error("Erreur : ", error);
-            alert(t.docErrorAlert);
+            alert(t.docErrorAlert + " " + error.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = editingDocId ? t.btnUpdateDoc : t.btnSubmitDoc;
         }
     }
 
@@ -655,7 +689,7 @@
         document.getElementById('docDesc').value = desc !== '-' ? desc : '';
         
         if (fileName && fileName !== translations[currentLang].noFile) {
-            fileInfoDisplay.textContent = `📎 [${fileType || 'Fichier'}] ${fileName} ${fileSize ? '('+fileSize+')' : ''} - Remplacez si besoin`;
+            fileInfoDisplay.textContent = `📎 [${fileType || 'Fichier'}] ${fileName} ${fileSize ? '('+fileSize+')' : ''} - (Gardé si non remplacé)`;
         } else {
             fileInfoDisplay.textContent = '';
         }
@@ -725,6 +759,11 @@
             let fileDisplayStr = item.fileName || t.noFile;
             if (item.fileSize) {
                 fileDisplayStr += ` (${item.fileSize})`;
+            }
+
+            // Si un lien de téléchargement Storage existe, on ajoute un bouton/lien direct
+            if (item.fileUrl) {
+                fileDisplayStr += ` <a href="${item.fileUrl}" target="_blank" class="file-link">${t.downloadFile}</a>`;
             }
 
             let actionsHtml = `<div class="archive-actions">`;
