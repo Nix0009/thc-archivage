@@ -3,350 +3,227 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archivage THC - Pro</title>
-    <style>
-        :root { --primary-blue: #1976d2; --danger: #d32f2f; --warning: #f57c00; --secondary: #34495e; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; padding: 20px; color: #333; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 15px; }
-        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        button { padding: 10px 15px; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        button:disabled { background: #90caf9; cursor: not-allowed; }
-        .btn-primary { background: var(--primary-blue); width: 100%; font-size: 16px; }
-        .btn-secondary { background: var(--secondary); }
-        .btn-danger { background: var(--danger); font-size: 12px; padding: 5px 10px; }
-        .btn-warning { background: var(--warning); font-size: 12px; padding: 5px 10px; }
-        .drop-zone { border: 2px dashed var(--primary-blue); padding: 20px; text-align: center; cursor: pointer; background: #f0f7ff; margin-top: 5px; border-radius: 6px; }
-        .archive-card { border-left: 5px solid var(--primary-blue); background: #fff; padding: 15px; margin-top: 12px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .section-box { background: #f1f2f6; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dcdde1; }
-        .search-box { background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #bbdefb; }
-        .actions-row { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; }
-    </style>
+    <title>Système d'Archivage - Trust Handling Company</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome pour les icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 font-sans">
 
-<div class="container">
-    <h1 style="text-align: center; color: var(--secondary);">Système d'Archivage - THC</h1>
-
-    <!-- SECTION RECHERCHE -->
-    <div class="search-box">
-        <input type="text" id="searchInput" placeholder="🔍 Rechercher par titre, dossier ou nom de fichier..." onkeyup="filterArchives()">
-    </div>
-
-    <!-- SECTION GESTION DES DOSSIERS -->
-    <div class="section-box">
-        <h3>⚙️ Gestion des Dossiers & Sous-dossiers</h3>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-            <div style="flex: 1; min-width: 200px;">
-                <label style="font-size: 13px; font-weight: bold;">Dossier Principal cible</label>
-                <select id="parentFolderSelect"></select>
+    <!-- En-tête -->
+    <header class="bg-blue-900 text-white shadow-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-plane-arrival text-2xl text-blue-300"></i>
+                <h1 class="text-xl font-bold">Trust Handling Company - Archives</h1>
             </div>
-            <div style="flex: 1; min-width: 200px;">
-                <label style="font-size: 13px; font-weight: bold;">Nouveau sous-dossier</label>
-                <input type="text" id="newSubFolderName" placeholder="Ex: Janvier 2026">
-            </div>
+            <span id="loadingText" class="text-sm bg-blue-800 px-3 py-1 rounded-full text-blue-200">Connexion à Firebase...</span>
         </div>
-        <button onclick="addSubFolder()" class="btn-secondary" style="width: 100%;">Ajouter le sous-dossier</button>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        <div style="margin-top: 15px; border-top: 1px solid #ccc; padding-top: 10px;">
-            <label style="font-size: 13px; font-weight: bold; color: var(--danger);">Supprimer un sous-dossier existant</label>
-            <div style="display: flex; gap: 10px; margin-top: 5px;">
-                <select id="subFolderListForDeletion" style="flex: 1;"></select>
-                <button onclick="deleteSubFolder()" class="btn-danger">Supprimer ce sous-dossier</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- FORMULAIRE D'ARCHIVAGE / EDITION -->
-    <div class="section-box" id="formSection">
-        <h3 id="formTitle">📁 Ajouter une nouvelle archive</h3>
-        <input type="hidden" id="editingDocId" value="">
-
-        <div class="form-group">
-            <label style="font-size: 13px; font-weight: bold;">Titre du document</label>
-            <input type="text" id="docTitle" placeholder="Ex: Rapport mensuel...">
-        </div>
-
-        <div class="form-group">
-            <label style="font-size: 13px; font-weight: bold;">Emplacement de destination</label>
-            <select id="finalFolderSelect"></select>
-        </div>
-
-        <div class="form-group">
-            <label style="font-size: 13px; font-weight: bold;">Fichier (Optionnel lors de la modification)</label>
-            <div class="drop-zone" onclick="document.getElementById('docFile').click()">
-                📁 Cliquez pour choisir un fichier
-                <input type="file" id="docFile" style="display:none">
-                <div id="fileInfoDisplay" style="font-weight:bold; margin-top:5px; color:var(--primary-blue);"></div>
+        <!-- Panneau de gauche : Formulaire & Dossiers -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Formulaire d'upload -->
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h2 class="text-lg font-semibold mb-4 text-blue-900"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>Ajouter une archive</h2>
+                <form id="uploadForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Titre</label>
+                        <input type="text" id="archiveTitle" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Dossier / Categorie</label>
+                        <select id="archiveFolder" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                            <option value="Operations">Operations</option>
+                            <option value="Administratif">Administratif</option>
+                            <option value="Financier">Financier</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Fichier</label>
+                        <input type="file" id="archiveFile" required class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+                    <!-- Barre de progression -->
+                    <div id="progressContainer" class="hidden">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p id="progressText" class="text-xs text-gray-500 mt-1 text-right">0%</p>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition">Enregistrer</button>
+                </form>
             </div>
         </div>
 
-        <!-- Barre de progression -->
-        <div id="progressContainer" style="display:none; width:100%; background:#ddd; height:18px; border-radius:10px; margin: 15px 0; overflow: hidden;">
-            <div id="progressBar" style="width:0%; height:100%; background:var(--primary-blue); border-radius:10px; transition: width 0.2s;"></div>
+        <!-- Panneau de droite : Recherche et Tableau des archives -->
+        <div class="lg:col-span-3 space-y-6">
+            <!-- Barre de recherche -->
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex items-center space-x-4">
+                <i class="fa-solid fa-search text-gray-400 ml-2"></i>
+                <input type="text" id="searchInput" placeholder="Rechercher par titre, dossier, nom, type, description..." class="w-full focus:outline-none text-gray-700" oninput="filterArchives()">
+            </div>
+
+            <!-- Liste / Tableau -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titre / Fichier</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dossier</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="archivesTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Les données injectées par Firestore apparaîtront ici -->
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div id="progressText" style="text-align:center; font-size:12px; font-weight:bold; margin-bottom:10px; color:#555;"></div>
+    </main>
 
-        <button id="btnSubmitDoc" onclick="saveDocument()" class="btn-primary">Enregistrer dans les archives</button>
-        <button id="btnCancelEdit" onclick="cancelEdit()" class="btn-secondary" style="width:100%; margin-top:8px; display:none;">Annuler la modification</button>
-    </div>
+    <!-- Scripts Firebase et Logique -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-    <!-- LISTE DES ARCHIVES -->
-    <div id="archivesListContainer">
-        <h3>📂 Liste des fichiers archivés</h3>
-        <div id="archivesList"></div>
-    </div>
-</div>
+        // Configuration Firebase (remplacez par vos propres identifiants sécurisés)
+        const firebaseConfig = {
+            apiKey: "VOTRE_API_KEY",
+            authDomain: "votre-projet.firebaseapp.com",
+            projectId: "votre-projet",
+            storageBucket: "votre-projet.appspot.com",
+            messagingSenderId: "ID",
+            appId: "APP_ID"
+        };
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyDTfE06jD2NUS7-l5ynx0Iy-kFtg-8IzPw",
-        authDomain: "thc-archivage.firebaseapp.com",
-        projectId: "thc-archivage",
-        storageBucket: "thc-archivage.firebasestorage.app",
-        messagingSenderId: "630363860954",
-        appId: "1:630363860954:web:953c7a0e15bfa53b469ae3"
-    };
+        let allArchivesData = [];
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
-
-    let folderStructure = {};
-    let selectedFile = null;
-    let allArchivesData = [];
-
-    // CHARGEMENT DES DOSSIERS DEPUIS FIRESTORE
-    async function initFolders() {
-        const docSnap = await getDoc(doc(db, "settings", "folders"));
-        if (docSnap.exists()) {
-            folderStructure = docSnap.data().structure;
-        } else {
-            folderStructure = { "Administration": [], "Comptabilité": [], "Audits": [], "Contrats": [], "Rapport": [], "Facture": [] };
-            await setDoc(doc(db, "settings", "folders"), { structure: folderStructure });
+        window.updateAllSelects = function() {
+            // Fonction d'initialisation des listes déroulantes si nécessaire
         }
-        updateSelects();
-    }
 
-    function updateSelects() {
-        const parent = document.getElementById('parentFolderSelect');
-        const final = document.getElementById('finalFolderSelect');
-        const subDel = document.getElementById('subFolderListForDeletion');
-        
-        parent.innerHTML = final.innerHTML = subDel.innerHTML = '';
+        // Gestionnaire d'envoi du formulaire avec barre de progression
+        document.getElementById('uploadForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('archiveTitle').value;
+            const folder = document.getElementById('archiveFolder').value;
+            const fileInput = document.getElementById('archiveFile');
+            const file = fileInput.files[0];
 
-        for (let main in folderStructure) {
-            parent.innerHTML += `<option value="${main}">${main}</option>`;
-            final.innerHTML += `<option value="${main}">📁 ${main}</option>`;
-            
-            folderStructure[main].forEach(sub => {
-                const fullSub = `${main} / ${sub}`;
-                final.innerHTML += `<option value="${fullSub}">   └─ ${sub}</option>`;
-                subDel.innerHTML += `<option value="${main}|${sub}">${main} -> ${sub}</option>`;
-            });
-        }
-    }
+            if (!file) return;
 
-    // AJOUTER UN SOUS-DOSSIER
-    window.addSubFolder = async () => {
-        const p = document.getElementById('parentFolderSelect').value;
-        const s = document.getElementById('newSubFolderName').value.trim();
-        if(!s) return alert("Veuillez entrer un nom de sous-dossier.");
+            const storageRef = ref(storage, `archives/${folder}/${file.name}`);
+            const uploadTask = uploadBytesResumable(storageRef, file);
 
-        if(!folderStructure[p].includes(s)) {
-            folderStructure[p].push(s);
-            await setDoc(doc(db, "settings", "folders"), { structure: folderStructure });
-            document.getElementById('newSubFolderName').value = '';
-            updateSelects();
-            alert("Sous-dossier ajouté avec succès !");
-        } else {
-            alert("Ce sous-dossier existe déjà dans ce dossier principal.");
-        }
-    };
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            progressContainer.classList.remove('hidden');
 
-    // SUPPRIMER UN SOUS-DOSSIER
-    window.deleteSubFolder = async () => {
-        const val = document.getElementById('subFolderListForDeletion').value;
-        if(!val) return alert("Aucun sous-dossier à supprimer.");
-        
-        const [main, sub] = val.split('|');
-        if(!confirm(`Voulez-vous vraiment supprimer le sous-dossier "${sub}" ?`)) return;
-
-        folderStructure[main] = folderStructure[main].filter(item => item !== sub);
-        await setDoc(doc(db, "settings", "folders"), { structure: folderStructure });
-        updateSelects();
-        alert("Sous-dossier supprimé !");
-    };
-
-    // GESTION FICHIER INPUT
-    document.getElementById('docFile').onchange = (e) => {
-        if(e.target.files.length > 0) {
-            selectedFile = e.target.files[0];
-            document.getElementById('fileInfoDisplay').textContent = `📎 ${selectedFile.name}`;
-        }
-    };
-
-    // ENREGISTREMENT OU MISE A JOUR (SAVE / UPDATE)
-    window.saveDocument = async () => {
-        const btn = document.getElementById('btnSubmitDoc');
-        const title = document.getElementById('docTitle').value.trim();
-        const folder = document.getElementById('finalFolderSelect').value;
-        const editingId = document.getElementById('editingDocId').value;
-        
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
-
-        if(!title) return alert("Veuillez entrer un titre pour le document.");
-
-        btn.disabled = true;
-
-        if (selectedFile) {
-            progressContainer.style.display = 'block';
-            const storageRef = ref(storage, 'archives/' + Date.now() + '_' + selectedFile.name);
-            const task = uploadBytesResumable(storageRef, selectedFile);
-            
-            task.on('state_changed', 
+            uploadTask.on('state_changed', 
                 (snapshot) => {
-                    const percent = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-                    progressBar.style.width = percent + '%';
-                    progressText.textContent = `Upload en cours : ${percent}%`;
-                },
-                (error) => { 
-                    alert("Erreur upload : " + error.message); 
-                    btn.disabled = false; 
-                    progressContainer.style.display = 'none';
-                },
-                async () => {
-                    const url = await getDownloadURL(task.snapshot.ref);
-                    await commitToFirestore(editingId, title, folder, url, selectedFile.name);
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    progressBar.style.width = progress + '%';
+                    progressText.innerText = Math.round(progress) + '%';
+                }, 
+                (error) => {
+                    console.error("Erreur d'upload :", error);
+                }, 
+                () => {
+                    getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
+                        await addDoc(collection(db, "archives"), {
+                            title,
+                            folder,
+                            fileName: file.name,
+                            fileSize: file.size,
+                            fileType: file.type,
+                            fileUrl: downloadURL,
+                            createdAt: new Date().toISOString()
+                        });
+                        progressContainer.classList.add('hidden');
+                        document.getElementById('uploadForm').reset();
+                    });
                 }
             );
-        } else {
-            // Pas de nouveau fichier sélectionné
-            if (editingId) {
-                // On garde l'ancien lien existant
-                const existingItem = allArchivesData.find(item => item.id === editingId);
-                await commitToFirestore(editingId, title, folder, existingItem.fileUrl, existingItem.fileName);
-            } else {
-                await commitToFirestore('', title, folder, '', 'Aucun');
+        });
+
+        // Fonction globale de rendu du tableau
+        window.renderArchives = function(data) {
+            const tbody = document.getElementById('archivesTableBody');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">Aucune archive trouvée.</td></tr>`;
+                return;
+            }
+
+            data.forEach((item) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${item.title}</div>
+                        <div class="text-sm text-gray-500">${item.fileName || ''}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">${item.folder}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${new Date(item.createdAt).toLocaleDateString()}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="${item.fileUrl}" target="_blank" class="text-blue-600 hover:text-blue-900 mr-3"><i class="fa-solid fa-download"></i></a>
+                        <button onclick="deleteArchive('${item.id}')" class="text-red-600 hover:text-red-900"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Suppression d'une archive
+        window.deleteArchive = async function(id) {
+            if (confirm("Voulez-vous vraiment supprimer cette archive ?")) {
+                await deleteDoc(doc(db, "archives", id));
             }
         }
-    };
 
-    async function commitToFirestore(id, title, folder, fileUrl, fileName) {
-        if (id) {
-            // Mode Modification
-            await updateDoc(doc(db, "archives", id), {
-                title: title,
-                folder: folder,
-                fileUrl: fileUrl,
-                fileName: fileName
+        // Filtrage multicritère optimisé
+        window.filterArchives = function() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allArchivesData.filter(item => {
+                const matchTitle = item.title?.toLowerCase().includes(query);
+                const matchFolder = item.folder?.toLowerCase().includes(query);
+                const matchFileName = item.fileName?.toLowerCase().includes(query);
+                const matchType = item.fileType?.toLowerCase().includes(query);
+                const matchDate = item.createdAt?.toLowerCase().includes(query);
+                return matchTitle || matchFolder || matchFileName || matchType || matchDate;
             });
-            alert("Archive mise à jour avec succès !");
-        } else {
-            // Mode Ajout
-            await addDoc(collection(db, "archives"), {
-                title: title,
-                folder: folder,
-                fileUrl: fileUrl,
-                fileName: fileName,
-                timestamp: new Date()
+
+            renderArchives(filtered);
+        }
+
+        // Synchronisation temps réel avec Firestore
+        onSnapshot(collection(db, "archives"), (snapshot) => {
+            allArchivesData = [];
+            snapshot.forEach((doc) => {
+                allArchivesData.push({ id: doc.id, ...doc.data() });
             });
-            alert("Archive enregistrée avec succès !");
-        }
-        cancelEdit();
-        document.getElementById('btnSubmitDoc').disabled = false;
-        document.getElementById('progressContainer').style.display = 'none';
-        document.getElementById('progressText').textContent = '';
-    }
+            
+            const loadingText = document.getElementById('loadingText');
+            if (loadingText) loadingText.style.display = 'none';
 
-    // PREPARER LA MODIFICATION D'UNE ARCHIVE
-    window.editArchive = (id, title, folder) => {
-        document.getElementById('editingDocId').value = id;
-        document.getElementById('docTitle').value = title;
-        document.getElementById('finalFolderSelect').value = folder;
-        
-        document.getElementById('formTitle').textContent = "✏️ Modifier l'archive";
-        document.getElementById('btnSubmitDoc').textContent = "Mettre à jour l'archive";
-        document.getElementById('btnCancelEdit').style.display = 'block';
-        
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    // ANNULER L'EDITION
-    window.cancelEdit = () => {
-        document.getElementById('editingDocId').value = '';
-        document.getElementById('docTitle').value = '';
-        document.getElementById('docFile').value = '';
-        selectedFile = null;
-        document.getElementById('fileInfoDisplay').textContent = '';
-        
-        document.getElementById('formTitle').textContent = "📁 Ajouter une nouvelle archive";
-        document.getElementById('btnSubmitDoc').textContent = "Enregistrer dans les archives";
-        document.getElementById('btnCancelEdit').style.display = 'none';
-    };
-
-    // SUPPRIMER UNE ARCHIVE
-    window.deleteArchive = async (id) => {
-        if(confirm("Voulez-vous vraiment supprimer cette archive ?")) {
-            await deleteDoc(doc(db, "archives", id));
-            if(document.getElementById('editingDocId').value === id) cancelEdit();
-        }
-    };
-
-    // RENDU DES ARCHIVES & RECHERCHE INSTANTANÉE
-    window.filterArchives = () => {
-        const query = document.getElementById('searchInput').value.toLowerCase().trim();
-        const listContainer = document.getElementById('archivesList');
-        listContainer.innerHTML = '';
-
-        const filtered = allArchivesData.filter(item => {
-            return (
-                (item.title && item.title.toLowerCase().includes(query)) ||
-                (item.folder && item.folder.toLowerCase().includes(query)) ||
-                (item.fileName && item.fileName.toLowerCase().includes(query))
-            );
+            renderArchives(allArchivesData);
         });
 
-        if(filtered.length === 0) {
-            listContainer.innerHTML = '<p style="color:#777; text-align:center;">Aucune archive trouvée.</p>';
-            return;
-        }
-
-        filtered.forEach(d => {
-            const safeTitle = (d.title || '').replace(/'/g, "\\'");
-            const safeFolder = (d.folder || '').replace(/'/g, "\\'");
-
-            listContainer.innerHTML += `
-                <div class="archive-card">
-                    <div style="font-size: 16px; font-weight: bold; color: var(--secondary);">${d.title}</div>
-                    <div style="font-size: 13px; color: var(--primary-blue); margin: 4px 0;">📁 ${d.folder}</div>
-                    <div style="font-size: 12px; color: #555;">📎 Fichier : ${d.fileName || 'Aucun'}</div>
-                    <div class="actions-row">
-                        ${d.fileUrl ? `<a href="${d.fileUrl}" target="_blank" style="text-decoration:none; background:#27ae60; color:white; padding:5px 10px; border-radius:4px; font-size:12px; font-weight:bold; display:inline-block; line-height:20px;">📥 Télécharger</a>` : ''}
-                        <button onclick="editArchive('${d.id}', '${safeTitle}', '${safeFolder}')" class="btn-warning">Modifier</button>
-                        <button onclick="deleteArchive('${d.id}')" class="btn-danger">Supprimer</button>
-                    </div>
-                </div>`;
-        });
-    };
-
-    // ÉCOUTEUR EN TEMPS RÉEL (FIRESTORE)
-    onSnapshot(collection(db, "archives"), (snap) => {
-        allArchivesData = [];
-        snap.forEach(docSnap => {
-            allArchivesData.push({ id: docSnap.id, ...docSnap.data() });
-        });
-        filterArchives();
-    });
-
-    // Lancement au démarrage
-    initFolders();
-</script>
+        window.updateAllSelects();
+    </script>
 </body>
 </html>
