@@ -11,8 +11,8 @@
         .form-group { margin-bottom: 15px; }
         input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
         button { width: 100%; padding: 12px; background: var(--primary-blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        button:disabled { background: #90caf9; }
-        .drop-zone { border: 2px dashed var(--primary-blue); padding: 20px; text-align: center; cursor: pointer; background: #f0f7ff; margin-top: 10px; }
+        button:disabled { background: #90caf9; cursor: not-allowed; }
+        .drop-zone { border: 2px dashed var(--primary-blue); padding: 20px; text-align: center; cursor: pointer; background: #f0f7ff; margin-top: 10px; border-radius: 6px; }
         .archive-card { border-left: 5px solid var(--primary-blue); background: #fff; padding: 15px; margin-top: 10px; border: 1px solid #ddd; border-radius: 8px; }
     </style>
 </head>
@@ -21,25 +21,33 @@
 <div class="container">
     <h1>Système d'Archivage - THC</h1>
     
-    <div class="management-section" style="background:#eee; padding:15px; margin-bottom:20px;">
+    <div class="management-section" style="background:#eee; padding:15px; margin-bottom:20px; border-radius:8px;">
         <h2>⚙️ Gérer les Dossiers</h2>
         <select id="parentFolderSelect"></select>
-        <input type="text" id="newSubFolderName" placeholder="Nom nouveau sous-dossier" style="margin: 10px 0;">
+        <input type="text" id="newSubFolderName" placeholder="Nom du nouveau sous-dossier" style="margin: 10px 0;">
         <button onclick="addSubFolder()" style="background:#34495e;">Ajouter Sous-dossier</button>
     </div>
 
     <div class="form-group">
         <input type="text" id="docTitle" placeholder="Titre du document">
     </div>
+    
     <div class="form-group">
         <select id="finalFolderSelect"></select>
     </div>
+
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('docFile').click()">
-        📁 Cliquez pour choisir un fichier
+        📁 Cliquez ou glissez un fichier ici
         <input type="file" id="docFile" style="display:none">
-        <div id="fileInfoDisplay" style="font-weight:bold; margin-top:5px;"></div>
+        <div id="fileInfoDisplay" style="font-weight:bold; margin-top:5px; color:#1976d2;"></div>
     </div>
-    <br>
+
+    <!-- Barre de progression visible -->
+    <div id="progressContainer" style="display:none; width:100%; background:#ddd; height:20px; border-radius:10px; margin: 15px 0; overflow: hidden;">
+        <div id="progressBar" style="width:0%; height:100%; background:var(--primary-blue); border-radius:10px; transition: width 0.2s;"></div>
+    </div>
+    <div id="progressText" style="text-align:center; font-size:13px; font-weight:bold; margin-bottom:10px; color:#555;"></div>
+
     <button id="btnSubmitDoc" onclick="saveDocument()">Enregistrer dans les archives</button>
 
     <div id="archivesList" style="margin-top:20px;"></div>
@@ -90,28 +98,50 @@
         if(s && !folderStructure[p].includes(s)) {
             folderStructure[p].push(s);
             await setDoc(doc(db, "settings", "folders"), { structure: folderStructure });
+            document.getElementById('newSubFolderName').value = '';
             updateSelects();
+            alert("Sous-dossier ajouté avec succès !");
         }
     };
 
     document.getElementById('docFile').onchange = (e) => {
-        selectedFile = e.target.files[0];
-        document.getElementById('fileInfoDisplay').textContent = selectedFile.name;
+        if(e.target.files.length > 0) {
+            selectedFile = e.target.files[0];
+            document.getElementById('fileInfoDisplay').textContent = `📎 ${selectedFile.name}`;
+        }
     };
 
     window.saveDocument = async () => {
         const btn = document.getElementById('btnSubmitDoc');
         const title = document.getElementById('docTitle').value;
-        if(!title) return alert("Entrez un titre");
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+
+        if(!title) {
+            alert("Veuillez entrer un titre pour le document.");
+            return;
+        }
 
         btn.disabled = true;
-        
+        progressContainer.style.display = 'block';
+
         if (selectedFile) {
             const storageRef = ref(storage, 'archives/' + Date.now() + '_' + selectedFile.name);
             const task = uploadBytesResumable(storageRef, selectedFile);
+            
             task.on('state_changed', 
-                (s) => btn.textContent = `Upload : ${Math.round((s.bytesTransferred / s.totalBytes)*100)}%`,
-                (e) => { alert(e.message); btn.disabled = false; },
+                (snapshot) => {
+                    const percent = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                    progressBar.style.width = percent + '%';
+                    progressText.textContent = `Upload en cours : ${percent}%`;
+                },
+                (error) => { 
+                    alert("Erreur lors de l'upload : " + error.message); 
+                    btn.disabled = false; 
+                    progressContainer.style.display = 'none';
+                    progressText.textContent = '';
+                },
                 async () => {
                     const url = await getDownloadURL(task.snapshot.ref);
                     await saveToFirestore(title, url);
@@ -124,19 +154,31 @@
 
     async function saveToFirestore(title, url) {
         await addDoc(collection(db, "archives"), {
-            title, folder: document.getElementById('finalFolderSelect').value,
-            fileUrl: url, fileName: selectedFile ? selectedFile.name : 'Aucun', timestamp: new Date()
+            title: title, 
+            folder: document.getElementById('finalFolderSelect').value,
+            fileUrl: url, 
+            fileName: selectedFile ? selectedFile.name : 'Aucun', 
+            timestamp: new Date()
         });
-        alert("Succès !");
+        alert("Archive enregistrée avec succès !");
         location.reload();
     }
 
     onSnapshot(collection(db, "archives"), (snap) => {
         const list = document.getElementById('archivesList');
-        list.innerHTML = '';
+        list.innerHTML = '<h3>📂 Liste des archives</h3>';
+        if(snap.empty) {
+            list.innerHTML += '<p style="color:#777;">Aucune archive pour le moment.</p>';
+            return;
+        }
         snap.forEach(doc => {
             const d = doc.data();
-            list.innerHTML += `<div class="archive-card"><strong>${d.title}</strong><br>${d.folder}<br>${d.fileUrl ? `<a href="${d.fileUrl}" target="_blank">Télécharger</a>` : 'Aucun fichier'}</div>`;
+            list.innerHTML += `
+                <div class="archive-card">
+                    <strong>${d.title}</strong><br>
+                    <small style="color:#1976d2;">📁 ${d.folder}</small><br>
+                    ${d.fileUrl ? `<a href="${d.fileUrl}" target="_blank" style="font-weight:bold; text-decoration:none;">📥 Télécharger le fichier (${d.fileName})</a>` : 'Aucun fichier'}
+                </div>`;
         });
     });
 
