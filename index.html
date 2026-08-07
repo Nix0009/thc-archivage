@@ -3,186 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archivage THC - Cloud</title>
+    <title>Archivage THC - Pro</title>
     <style>
-        :root { --primary-blue: #1976d2; --dark-bg: #2c3e50; }
+        :root { --primary-blue: #1976d2; --danger: #d32f2f; --secondary: #34495e; }
         body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; padding: 20px; }
         .container { max-width: 800px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 15px; }
-        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: var(--primary-blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        button:disabled { background: #90caf9; cursor: not-allowed; }
-        .drop-zone { border: 2px dashed var(--primary-blue); padding: 20px; text-align: center; cursor: pointer; background: #f0f7ff; margin-top: 10px; border-radius: 6px; }
-        .archive-card { border-left: 5px solid var(--primary-blue); background: #fff; padding: 15px; margin-top: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        .card { border: 1px solid #ddd; padding: 15px; margin-top: 10px; border-radius: 8px; }
+        .btn-del { background: var(--danger); color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; }
+        input, select { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; }
+        .search-box { background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <h1>Système d'Archivage - THC</h1>
-    
-    <div class="management-section" style="background:#eee; padding:15px; margin-bottom:20px; border-radius:8px;">
-        <h2>⚙️ Gérer les Dossiers</h2>
-        <select id="parentFolderSelect"></select>
-        <input type="text" id="newSubFolderName" placeholder="Nom du nouveau sous-dossier" style="margin: 10px 0;">
-        <button onclick="addSubFolder()" style="background:#34495e;">Ajouter Sous-dossier</button>
+    <h1>Système d'Archivage THC</h1>
+
+    <!-- Recherche -->
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="🔍 Rechercher dans les archives (titre)..." onkeyup="filterArchives()">
     </div>
 
-    <div class="form-group">
-        <input type="text" id="docTitle" placeholder="Titre du document">
-    </div>
-    
-    <div class="form-group">
-        <select id="finalFolderSelect"></select>
-    </div>
-
-    <div class="drop-zone" id="dropZone" onclick="document.getElementById('docFile').click()">
-        📁 Cliquez ou glissez un fichier ici
-        <input type="file" id="docFile" style="display:none">
-        <div id="fileInfoDisplay" style="font-weight:bold; margin-top:5px; color:#1976d2;"></div>
+    <!-- Gestion Dossiers -->
+    <div class="card">
+        <h3>📂 Gestion des Dossiers</h3>
+        <select id="folderListForDeletion"></select>
+        <button onclick="deleteFolder()" class="btn-del">Supprimer le dossier sélectionné</button>
     </div>
 
-    <!-- Barre de progression visible -->
-    <div id="progressContainer" style="display:none; width:100%; background:#ddd; height:20px; border-radius:10px; margin: 15px 0; overflow: hidden;">
-        <div id="progressBar" style="width:0%; height:100%; background:var(--primary-blue); border-radius:10px; transition: width 0.2s;"></div>
-    </div>
-    <div id="progressText" style="text-align:center; font-size:13px; font-weight:bold; margin-bottom:10px; color:#555;"></div>
-
-    <button id="btnSubmitDoc" onclick="saveDocument()">Enregistrer dans les archives</button>
-
-    <div id="archivesList" style="margin-top:20px;"></div>
+    <!-- Liste Archives -->
+    <div id="archivesList"></div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, onSnapshot, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+    import { getFirestore, collection, deleteDoc, doc, onSnapshot, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDTfE06jD2NUS7-l5ynx0Iy-kFtg-8IzPw",
-        authDomain: "thc-archivage.firebaseapp.com",
         projectId: "thc-archivage",
-        storageBucket: "thc-archivage.firebasestorage.app",
-        messagingSenderId: "630363860954",
-        appId: "1:630363860954:web:953c7a0e15bfa53b469ae3"
+        storageBucket: "thc-archivage.firebasestorage.app"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
-    let folderStructure = {};
-    let selectedFile = null;
+    let allArchives = [];
 
-    // Charger les dossiers depuis Firestore
-    async function initFolders() {
+    // SUPPRIMER ARCHIVE
+    window.deleteArchive = async (id) => {
+        if(confirm("Supprimer cette archive ?")) await deleteDoc(doc(db, "archives", id));
+    };
+
+    // SUPPRIMER DOSSIER
+    window.deleteFolder = async () => {
+        const folder = document.getElementById('folderListForDeletion').value;
+        if(!confirm(`Supprimer le dossier ${folder} ?`)) return;
+        
         const docSnap = await getDoc(doc(db, "settings", "folders"));
-        folderStructure = docSnap.exists() ? docSnap.data().structure : { "Administration": [], "Comptabilité": [] };
-        updateSelects();
-    }
-
-    function updateSelects() {
-        const parent = document.getElementById('parentFolderSelect');
-        const final = document.getElementById('finalFolderSelect');
-        parent.innerHTML = final.innerHTML = '';
-        for (let main in folderStructure) {
-            parent.innerHTML += `<option value="${main}">${main}</option>`;
-            final.innerHTML += `<option value="${main}">📁 ${main}</option>`;
-            folderStructure[main].forEach(sub => final.innerHTML += `<option value="${main}/${sub}">└─ ${sub}</option>`);
-        }
-    }
-
-    window.addSubFolder = async () => {
-        const p = document.getElementById('parentFolderSelect').value;
-        const s = document.getElementById('newSubFolderName').value.trim();
-        if(s && !folderStructure[p].includes(s)) {
-            folderStructure[p].push(s);
-            await setDoc(doc(db, "settings", "folders"), { structure: folderStructure });
-            document.getElementById('newSubFolderName').value = '';
-            updateSelects();
-            alert("Sous-dossier ajouté avec succès !");
-        }
+        let structure = docSnap.data().structure;
+        
+        // Logique simplifiée de suppression
+        delete structure[folder]; 
+        await setDoc(doc(db, "settings", "folders"), { structure });
+        alert("Dossier supprimé");
     };
 
-    document.getElementById('docFile').onchange = (e) => {
-        if(e.target.files.length > 0) {
-            selectedFile = e.target.files[0];
-            document.getElementById('fileInfoDisplay').textContent = `📎 ${selectedFile.name}`;
-        }
-    };
-
-    window.saveDocument = async () => {
-        const btn = document.getElementById('btnSubmitDoc');
-        const title = document.getElementById('docTitle').value;
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
-
-        if(!title) {
-            alert("Veuillez entrer un titre pour le document.");
-            return;
-        }
-
-        btn.disabled = true;
-        progressContainer.style.display = 'block';
-
-        if (selectedFile) {
-            const storageRef = ref(storage, 'archives/' + Date.now() + '_' + selectedFile.name);
-            const task = uploadBytesResumable(storageRef, selectedFile);
-            
-            task.on('state_changed', 
-                (snapshot) => {
-                    const percent = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-                    progressBar.style.width = percent + '%';
-                    progressText.textContent = `Upload en cours : ${percent}%`;
-                },
-                (error) => { 
-                    alert("Erreur lors de l'upload : " + error.message); 
-                    btn.disabled = false; 
-                    progressContainer.style.display = 'none';
-                    progressText.textContent = '';
-                },
-                async () => {
-                    const url = await getDownloadURL(task.snapshot.ref);
-                    await saveToFirestore(title, url);
-                }
-            );
-        } else {
-            await saveToFirestore(title, '');
-        }
-    };
-
-    async function saveToFirestore(title, url) {
-        await addDoc(collection(db, "archives"), {
-            title: title, 
-            folder: document.getElementById('finalFolderSelect').value,
-            fileUrl: url, 
-            fileName: selectedFile ? selectedFile.name : 'Aucun', 
-            timestamp: new Date()
-        });
-        alert("Archive enregistrée avec succès !");
-        location.reload();
-    }
-
-    onSnapshot(collection(db, "archives"), (snap) => {
+    // FILTRAGE RECHERCHE
+    window.filterArchives = () => {
+        const term = document.getElementById('searchInput').value.toLowerCase();
         const list = document.getElementById('archivesList');
-        list.innerHTML = '<h3>📂 Liste des archives</h3>';
-        if(snap.empty) {
-            list.innerHTML += '<p style="color:#777;">Aucune archive pour le moment.</p>';
-            return;
-        }
-        snap.forEach(doc => {
-            const d = doc.data();
+        list.innerHTML = '';
+        allArchives.filter(a => a.title.toLowerCase().includes(term)).forEach(a => {
             list.innerHTML += `
-                <div class="archive-card">
-                    <strong>${d.title}</strong><br>
-                    <small style="color:#1976d2;">📁 ${d.folder}</small><br>
-                    ${d.fileUrl ? `<a href="${d.fileUrl}" target="_blank" style="font-weight:bold; text-decoration:none;">📥 Télécharger le fichier (${d.fileName})</a>` : 'Aucun fichier'}
+                <div class="card">
+                    <strong>${a.title}</strong> - ${a.folder}
+                    <button onclick="deleteArchive('${a.id}')" class="btn-del" style="float:right;">Supprimer</button>
                 </div>`;
         });
-    });
+    };
 
-    initFolders();
+    onSnapshot(collection(db, "archives"), (snap) => {
+        allArchives = [];
+        snap.forEach(d => allArchives.push({id: d.id, ...d.data()}));
+        filterArchives();
+    });
 </script>
 </body>
 </html>
