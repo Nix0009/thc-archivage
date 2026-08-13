@@ -289,8 +289,8 @@
 <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 
 <script>
-    // Configuration Google API
-    const CLIENT_ID = '93983819430-c35tovnnh1b2gqslc0n758e5v766jts4.apps.googleusercontent.com';
+    // Configuration Google API avec votre nouvel ID client
+    const CLIENT_ID = '93983819430-vc42kt9a211fjpf6a5nf03hcf147ldtp.apps.googleusercontent.com';
     const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
     let tokenClient;
@@ -313,7 +313,7 @@
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: SCOPES,
-            callback: '', // défini lors de la requête
+            callback: '', 
         });
         gisInited = true;
         maybeEnableButtons();
@@ -352,7 +352,6 @@
         }
     }
 
-    // Charger les données depuis le stockage local
     let archives = JSON.parse(localStorage.getItem('mes_archives_tch')) || [];
     let dossiers = JSON.parse(localStorage.getItem('mes_dossiers_tch')) || ['Général', 'Rapports', 'Administratif'];
 
