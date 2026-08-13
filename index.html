@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome pour les icônes -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
 
@@ -20,23 +22,31 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold leading-tight">Trust Handling Company</h1>
-                    <span class="text-xs text-blue-200 uppercase tracking-widest">Système d'Archivage Google Drive</span>
+                    <span class="text-xs text-blue-200 uppercase tracking-widest">Archivage Direct Google Drive</span>
                 </div>
             </div>
-            <span id="loadingText" class="text-sm bg-blue-800 px-3 py-1 rounded-full text-blue-200">Connexion à Firestore...</span>
+            
+            <!-- Zone d'authentification Google -->
+            <div class="flex items-center space-x-4">
+                <div id="authStatus" class="text-sm bg-blue-800 px-3 py-1 rounded-full text-blue-200">Non connecté</div>
+                <button id="googleLoginBtn" onclick="handleAuthClick()" class="bg-white text-blue-900 px-4 py-2 rounded-md font-semibold text-sm shadow hover:bg-blue-50 transition flex items-center space-x-2">
+                    <i class="fa-brands fa-google text-red-500"></i>
+                    <span>Connecter Google Drive</span>
+                </button>
+            </div>
         </div>
     </header>
 
     <main class="container mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        <!-- Panneau de gauche : Enregistrement de lien Google Drive -->
+        <!-- Panneau de gauche : Formulaire d'upload direct Drive -->
         <div class="lg:col-span-1 space-y-6">
             <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                <h2 class="text-lg font-semibold mb-4 text-blue-900"><i class="fa-brands fa-google-drive mr-2 text-green-600"></i>Lier un fichier Drive</h2>
+                <h2 class="text-lg font-semibold mb-4 text-blue-900"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>Envoyer sur le Drive</h2>
                 <form id="uploadForm" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Titre de l'archive</label>
-                        <input type="text" id="archiveTitle" required placeholder="Ex: Rapport Opérations Janvier" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text" id="archiveTitle" required placeholder="Ex: Manifeste de vol" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Dossier / Categorie</label>
@@ -47,14 +57,10 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Lien de partage Google Drive</label>
-                        <input type="url" id="driveLink" required placeholder="https://drive.google.com/..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700">Fichier à téléverser</label>
+                        <input type="file" id="archiveFile" required class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Description (Optionnel)</label>
-                        <input type="text" id="archiveDesc" placeholder="Détails supplémentaires..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition">Enregistrer dans l'index</button>
+                    <button type="submit" id="submitBtn" disabled class="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-md cursor-not-allowed transition">Connectez-vous d'abord</button>
                 </form>
             </div>
         </div>
@@ -64,7 +70,7 @@
             <!-- Barre de recherche -->
             <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex items-center space-x-4">
                 <i class="fa-solid fa-search text-gray-400 ml-2"></i>
-                <input type="text" id="searchInput" placeholder="Rechercher par titre, dossier, description..." class="w-full focus:outline-none text-gray-700" oninput="filterArchives()">
+                <input type="text" id="searchInput" placeholder="Rechercher par titre, nom de fichier, dossier..." class="w-full focus:outline-none text-gray-700" oninput="filterArchives()">
             </div>
 
             <!-- Liste / Tableau -->
@@ -72,128 +78,143 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titre & Description</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titre / Fichier</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dossier</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="archivesTableBody" class="bg-white divide-y divide-gray-200">
-                        <!-- Les données injectées par Firestore apparaîtront ici -->
+                        <tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">Veuillez vous connecter à votre compte Google pour voir les archives.</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </main>
 
-    <!-- Scripts Firebase et Logique -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    <!-- Scripts Logique OAuth & Drive -->
+    <script>
+        let tokenClient;
+        let accessToken = null;
 
-        // Configuration Firebase (Firestore uniquement pour indexer les liens Google Drive)
-        const firebaseConfig = {
-            apiKey: "AIzaSyDTfE06jD2NUS7-l5ynx0Iy-kFtg-8IzPw",
-            authDomain: "thc-archivage.firebaseapp.com",
-            projectId: "thc-archivage",
-            storageBucket: "thc-archivage.firebasestorage.app",
-            messagingSenderId: "630363860954",
-            appId: "1:630363860954:web:953c7a0e15bfa53b469ae3"
+        // Configuration Google API (À configurer avec votre Client ID Google Cloud)
+        const CLIENT_ID = 'VOTRE_CLIENT_ID_GOOGLE.apps.googleusercontent.com';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+        window.onload = function () {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: (response) => {
+                    if (response.error !== undefined) {
+                        alert("Erreur de connexion Google");
+                        return;
+                    }
+                    accessToken = response.access_token;
+                    document.getElementById('authStatus').innerText = "Connecté à Google Drive";
+                    document.getElementById('authStatus').className = "text-sm bg-green-800 px-3 py-1 rounded-full text-green-200";
+                    document.getElementById('googleLoginBtn').innerText = "Compte Lié";
+                    
+                    const submitBtn = document.getElementById('submitBtn');
+                    submitBtn.disabled = false;
+                    submitBtn.className = "w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition";
+                    
+                    loadDriveFiles();
+                },
+            });
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        function handleAuthClick() {
+            tokenClient.requestAccessToken({ prompt: 'consent' });
+        }
 
-        let allArchivesData = [];
-
-        // Gestionnaire d'envoi du formulaire pour enregistrer le lien Drive
+        // Fonction pour envoyer un fichier directement vers Google Drive via l'API REST
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const title = document.getElementById('archiveTitle').value;
-            const folder = document.getElementById('archiveFolder').value;
-            const driveLink = document.getElementById('driveLink').value;
-            const description = document.getElementById('archiveDesc').value;
-
-            try {
-                await addDoc(collection(db, "archives_drive"), {
-                    title,
-                    folder,
-                    driveLink,
-                    description,
-                    createdAt: new Date().toISOString()
-                });
-                document.getElementById('uploadForm').reset();
-                alert("Lien Google Drive indexé avec succès !");
-            } catch (error) {
-                console.error("Erreur lors de l'enregistrement :", error);
-            }
-        });
-
-        // Fonction globale de rendu du tableau
-        window.renderArchives = function(data) {
-            const tbody = document.getElementById('archivesTableBody');
-            tbody.innerHTML = '';
-            
-            if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">Aucune archive Google Drive trouvée.</td></tr>`;
+            if (!accessToken) {
+                alert("Veuillez d'abord vous connecter à votre compte Google.");
                 return;
             }
 
-            data.forEach((item) => {
+            const title = document.getElementById('archiveTitle').value;
+            const folder = document.getElementById('archiveFolder').value;
+            const fileInput = document.getElementById('archiveFile');
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            const metadata = {
+                name: file.name,
+                description: title + " [" + folder + "]"
+            };
+
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            form.append('file', file);
+
+            try {
+                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                    body: form
+                });
+
+                if (response.ok) {
+                    alert("Fichier téléversé avec succès sur votre Google Drive !");
+                    document.getElementById('uploadForm').reset();
+                    loadDriveFiles();
+                } else {
+                    alert("Erreur lors du téléversement sur le Drive.");
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        });
+
+        // Charger les fichiers stockés par l'application sur le Drive
+        async function loadDriveFiles() {
+            if (!accessToken) return;
+
+            try {
+                const response = await fetch('https://www.googleapis.com/drive/v3/files?q=trashed=false', {
+                    headers: new Headers({ 'Authorization': 'Bearer ' + accessToken })
+                });
+                const data = await response.json();
+                renderArchives(data.files || []);
+            } catch (error) {
+                console.error("Erreur de récupération des fichiers Drive:", error);
+            }
+        }
+
+        function renderArchives(files) {
+            const tbody = document.getElementById('archivesTableBody');
+            tbody.innerHTML = '';
+
+            if (files.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">Aucun fichier trouvé sur le Drive.</td></tr>`;
+                return;
+            }
+
+            files.forEach(file => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">${item.title}</div>
-                        <div class="text-xs text-gray-500">${item.description || 'Aucune description'}</div>
+                        <div class="text-sm font-medium text-gray-900">${file.name}</div>
+                        <div class="text-xs text-gray-500">${file.description || ''}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">${item.folder}</span>
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Google Drive</span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${new Date(item.createdAt).toLocaleDateString()}
+                        ${new Date(file.createdTime || Date.now()).toLocaleDateString()}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <a href="${item.driveLink}" target="_blank" class="text-green-600 hover:text-green-900 mr-3" title="Ouvrir sur Google Drive"><i class="fa-brands fa-google-drive text-lg"></i></a>
-                        <button onclick="deleteArchive('${item.id}')" class="text-red-600 hover:text-red-900" title="Supprimer de l'index"><i class="fa-solid fa-trash"></i></button>
+                        <a href="https://drive.google.com/file/d/${file.id}/view" target="_blank" class="text-green-600 hover:text-green-900 mr-3"><i class="fa-brands fa-google-drive"></i></a>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
-
-        // Suppression d'une entrée de l'index
-        window.deleteArchive = async function(id) {
-            if (confirm("Voulez-vous vraiment retirer ce lien de l'index des archives ?")) {
-                await deleteDoc(doc(db, "archives_drive", id));
-            }
-        }
-
-        // Filtrage multicritère
-        window.filterArchives = function() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = allArchivesData.filter(item => {
-                const matchTitle = item.title?.toLowerCase().includes(query);
-                const matchFolder = item.folder?.toLowerCase().includes(query);
-                const matchDesc = item.description?.toLowerCase().includes(query);
-                const matchDate = item.createdAt?.toLowerCase().includes(query);
-                return matchTitle || matchFolder || matchDesc || matchDate;
-            });
-
-            renderArchives(filtered);
-        }
-
-        // Synchronisation temps réel avec Firestore (collection "archives_drive")
-        onSnapshot(collection(db, "archives_drive"), (snapshot) => {
-            allArchivesData = [];
-            snapshot.forEach((doc) => {
-                allArchivesData.push({ id: doc.id, ...doc.data() });
-            });
-            
-            const loadingText = document.getElementById('loadingText');
-            if (loadingText) loadingText.style.display = 'none';
-
-            renderArchives(allArchivesData);
-        });
     </script>
 </body>
 </html>
