@@ -43,6 +43,14 @@
         .auth-container {
             display: flex;
             gap: 10px;
+            align-items: center;
+        }
+
+        .user-status {
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 6px 12px;
+            border-radius: 6px;
         }
 
         .main-layout {
@@ -213,6 +221,7 @@
     <div class="top-header">
         <h1>✈️ Trust Handling Company - Archives</h1>
         <div class="auth-container">
+            <span id="auth-status" class="user-status" style="display: none;">Connecté à Google Drive</span>
             <button id="auth-button" onclick="handleAuthClick()" style="width: auto; padding: 8px 16px;">Connexion Google Drive</button>
             <button id="signout-button" onclick="handleSignoutClick()" class="btn-danger" style="display: none;">Déconnexion</button>
         </div>
@@ -235,13 +244,13 @@
                 <label for="dateArchivage">Date</label>
                 <input type="date" id="dateArchivage">
 
-                <label for="fichier">Fichier</label>
+                <label for="fichier">Fichier à stocker sur Drive</label>
                 <input type="file" id="fichier" style="padding: 6px; background: #f8fafc;">
 
                 <label for="description">Description / Notes</label>
                 <textarea id="description" placeholder="Ajoutez des détails..."></textarea>
 
-                <button onclick="ajouterArchive()">Enregistrer</button>
+                <button id="btn-enregistrer" onclick="ajouterArchive()">Enregistrer sur Drive</button>
             </div>
 
             <div class="card">
@@ -297,6 +306,7 @@
         let tokenClient;
         let gapiInited = false;
         let gisInited = false;
+        let rootFolderId = null;
 
         function gapiLoaded() {
             gapi.load('client', initializeGapiClient);
@@ -313,25 +323,30 @@
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: CLIENT_ID,
                 scope: SCOPES,
-                callback: '', 
+                callback: handleTokenResponse,
             });
             gisInited = true;
         }
 
-        function handleAuthClick() {
-            tokenClient.callback = async (resp) => {
-                if (resp.error !== undefined) {
-                    throw (resp);
-                }
-                document.getElementById('auth-button').style.display = 'none';
-                document.getElementById('signout-button').style.display = 'block';
-            };
-
-            if (gapi.client.getToken() === null) {
-                tokenClient.requestAccessToken({prompt: 'consent'});
-            } else {
-                tokenClient.requestAccessToken({prompt: ''});
+        async function handleTokenResponse(resp) {
+            if (resp.error !== undefined) {
+                alert("Erreur de connexion Google Drive.");
+                return;
             }
+            document.getElementById('auth-button').style.display = 'none';
+            document.getElementById('auth-status').style.display = 'block';
+            document.getElementById('signout-button').style.display = 'block';
+            
+            // Initialiser le dossier racine sur le Drive de l'utilisateur
+            await verifierOuCreerDossierRacine();
+        }
+
+        function handleAuthClick() {
+            if (!gapiInited || !gisInited) {
+                alert("L'API Google n'est pas encore totalement chargée. Veuillez patienter une seconde.");
+                return;
+            }
+            tokenClient.requestAccessToken({prompt: 'consent'});
         }
 
         function handleSignoutClick() {
@@ -340,8 +355,38 @@
                 google.accounts.oauth2.revoke(token.access_token, () => {
                     gapi.client.setToken('');
                     document.getElementById('auth-button').style.display = 'block';
+                    document.getElementById('auth-status').style.display = 'none';
                     document.getElementById('signout-button').style.display = 'none';
+                    rootFolderId = null;
                 });
+            }
+        }
+
+        async function verifierOuCreerDossierRacine() {
+            try {
+                // Chercher si le dossier principal existe déjà sur Google Drive
+                const response = await gapi.client.drive.files.list({
+                    q: "mimeType='application/vnd.google-apps.folder' and name='Trust Handling Company - Archives' and trashed=false",
+                    fields: 'files(id, name)'
+                });
+
+                const files = response.result.files;
+                if (files && files.length > 0) {
+                    rootFolderId = files[0].id;
+                } else {
+                    // Créer le dossier s'il n'existe pas
+                    const folderMetadata = {
+                        'name': 'Trust Handling Company - Archives',
+                        'mimeType': 'application/vnd.google-apps.folder'
+                    };
+                    const folderCreate = await gapi.client.drive.files.create({
+                        resource: folderMetadata,
+                        fields: 'id'
+                    });
+                    rootFolderId = folderCreate.result.id;
+                }
+            } catch (err) {
+                console.error("Erreur lors de la configuration du dossier Drive :", err);
             }
         }
 
@@ -447,7 +492,7 @@
             }
         }
 
-        function ajouterArchive() {
+        async function ajouterArchive() {
             const titre = document.getElementById('titre').value.trim();
             const dossier = document.getElementById('dossierSelect').value;
             const sousDossier = document.getElementById('sousDossierSelect').value;
@@ -460,21 +505,68 @@
                 return;
             }
 
-            const nomFichier = fichierInput.files.length > 0 ? fichierInput.files[0].name : "Aucun fichier";
+            if (!gapi.client.getToken()) {
+                alert("Veuillez d'abord vous connecter à Google Drive en haut à droite.");
+                return;
+            }
 
-            const nouvelleArchive = {
-                id: Date.now(),
-                titre,
-                dossier,
-                sousDossier,
-                date,
-                nomFichier,
-                description
-            };
+            const btnEnregistrer = document.getElementById('btn-enregistrer');
+            btnEnregistrer.disabled = true;
+            btnEnregistrer.textContent = "Téléversement en cours sur Drive...";
 
-            archives.push(nouvelleArchive);
-            sauvegarderEtAfficher();
-            viderFormulaire();
+            try {
+                if (!rootFolderId) {
+                    await verifierOuCreerDossierRacine();
+                }
+
+                let fileId = null;
+                let nomFichier = "Aucun fichier";
+
+                if (fichierInput.files.length > 0) {
+                    const file = fichierInput.files[0];
+                    nomFichier = file.name;
+
+                    const metadata = {
+                        'name': file.name,
+                        'parents': [rootFolderId]
+                    };
+
+                    const accessToken = gapi.client.getToken().access_token;
+                    const form = new FormData();
+                    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                    form.append('file', file);
+
+                    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                        method: 'POST',
+                        headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                        body: form
+                    });
+                    const fileData = await res.json();
+                    fileId = fileData.id;
+                }
+
+                const nouvelleArchive = {
+                    id: Date.now(),
+                    titre,
+                    dossier,
+                    sousDossier,
+                    date,
+                    nomFichier,
+                    fileId,
+                    description
+                };
+
+                archives.push(nouvelleArchive);
+                sauvegarderEtAfficher();
+                viderFormulaire();
+                alert("Archive enregistrée et fichier stocké sur Google Drive avec succès !");
+            } catch (err) {
+                console.error(err);
+                alert("Une erreur est survenue lors du stockage sur Google Drive.");
+            } finally {
+                btnEnregistrer.disabled = false;
+                btnEnregistrer.textContent = "Enregistrer sur Drive";
+            }
         }
 
         function afficherArchives(liste) {
@@ -488,11 +580,15 @@
 
             liste.forEach((item) => {
                 const sousDossierBadge = item.sousDossier ? ` / 📅 ${item.sousDossier}` : '';
+                const lienFichier = item.fileId 
+                    ? `<a href="https://drive.google.com/file/d/${item.fileId}/view" target="_blank" style="color: #2563eb; text-decoration: none;">📎 ${item.nomFichier} (Ouvrir sur Drive)</a>` 
+                    : `📎 ${item.nomFichier}`;
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>
                         <strong style="display:block; color: #1e293b;">${item.titre}</strong>
-                        <span style="font-size: 12px; color: #64748b;">📎 ${item.nomFichier}</span>
+                        <span style="font-size: 12px; color: #64748b;">${lienFichier}</span>
                     </td>
                     <td><span style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 12px;">📁 ${item.dossier}${sousDossierBadge}</span></td>
                     <td style="color: #64748b; font-size: 13px;">${item.date}</td>
