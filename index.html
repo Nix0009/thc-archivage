@@ -3,123 +3,539 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>THC - Gestionnaire d'Archives</title>
+    <title>Trust Handling Company - Archives</title>
     <style>
         :root {
-            --primary: #2563eb;
-            --secondary: #64748b;
-            --bg: #f8fafc;
-            --card: #ffffff;
-            --text: #1e293b;
+            --primary-color: #1e3a8a;
+            --accent-color: #2563eb;
+            --success-color: #2563eb;
+            --bg-color: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-color: #1e293b;
         }
 
         body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
             margin: 0;
-            padding: 40px 20px;
+            padding: 0;
+            color: var(--text-color);
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
+        .top-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
+        .top-header h1 {
+            font-size: 20px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .header h1 { font-size: 2rem; color: #0f172a; margin-bottom: 5px; }
-        .header p { color: var(--secondary); }
+        .auth-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .main-layout {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
 
         .card {
-            background: var(--card);
+            background: white;
             padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            margin-bottom: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            font-size: 16px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: #475569;
+        }
+
+        input[type="text"], input[type="date"], select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+            background-color: #fff;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
         button {
-            background: var(--primary);
+            background-color: var(--accent-color);
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
             font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        button:hover { opacity: 0.9; }
-
-        input, select, textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #e2e8f0;
             border-radius: 8px;
-            box-sizing: border-box;
-            margin-top: 8px;
-            margin-bottom: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
         }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { text-align: left; color: var(--secondary); font-size: 0.85rem; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 16px 0; border-bottom: 1px solid #e2e8f0; }
-        
-        .folder-tag {
-            display: inline-block;
-            background: #dbeafe;
+        button:hover {
+            background-color: #1d4ed8;
+        }
+
+        .btn-secondary {
+            background-color: #64748b;
+        }
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+
+        .btn-danger {
+            background-color: #ef4444;
+            padding: 6px 12px;
+            font-size: 12px;
+            width: auto;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .search-bar input {
+            margin-bottom: 0;
+            padding: 12px 16px;
+            font-size: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+
+        th {
+            color: #64748b;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background-color: #f8fafc;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #94a3b8;
+            padding: 40px;
+            font-size: 14px;
+        }
+
+        .folder-manager {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .folders-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .folder-badge {
+            background-color: #eff6ff;
             color: #1e40af;
-            padding: 4px 12px;
+            padding: 4px 10px;
             border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin-right: 5px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #dbeafe;
+        }
+
+        .folder-badge span {
+            cursor: pointer;
+            color: #ef4444;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <h1>THC Archives</h1>
-        <p>Gestion sécurisée de vos documents</p>
+    <div class="top-header">
+        <h1>✈️ Trust Handling Company - Archives</h1>
+        <div class="auth-container">
+            <button id="auth-button" onclick="handleAuthClick()" style="width: auto; padding: 8px 16px;">Connexion Google Drive</button>
+            <button id="signout-button" onclick="handleSignoutClick()" class="btn-danger" style="display: none;">Déconnexion</button>
+        </div>
     </div>
 
-    <!-- Connexion -->
-    <div class="card" style="text-align: center;">
-        <button id="auth-button" onclick="handleAuthClick()">Se connecter à Google Drive</button>
-        <button id="signout-button" style="display:none; background:#ef4444;" onclick="handleSignoutClick()">Déconnexion</button>
+    <div class="main-layout">
+        <div>
+            <div class="card">
+                <h3>📁 Ajouter une archive</h3>
+                
+                <label for="titre">Titre</label>
+                <input type="text" id="titre" placeholder="Ex: Rapport Annuel">
+
+                <label for="dossierSelect">Dossier Principal</label>
+                <select id="dossierSelect"></select>
+
+                <label for="sousDossierSelect">Sous-dossier (Année)</label>
+                <select id="sousDossierSelect"></select>
+
+                <label for="dateArchivage">Date</label>
+                <input type="date" id="dateArchivage">
+
+                <label for="fichier">Fichier</label>
+                <input type="file" id="fichier" style="padding: 6px; background: #f8fafc;">
+
+                <label for="description">Description / Notes</label>
+                <textarea id="description" placeholder="Ajoutez des détails..."></textarea>
+
+                <button onclick="ajouterArchive()">Enregistrer</button>
+            </div>
+
+            <div class="card">
+                <h3>🗂️ Gérer les dossiers principaux</h3>
+                <div class="folder-manager">
+                    <input type="text" id="nouveauDossierNom" placeholder="Nouveau dossier..." style="margin-bottom: 0;">
+                    <button class="btn-secondary" onclick="creerDossier()" style="width: auto;">Créer</button>
+                </div>
+                <div class="folders-tags" id="listeDossiersTags"></div>
+            </div>
+
+            <div class="card">
+                <h3>📅 Gérer les sous-dossiers (Années)</h3>
+                <div class="folder-manager">
+                    <input type="text" id="nouveauSousDossierNom" placeholder="Ex: 2026..." style="margin-bottom: 0;">
+                    <button class="btn-secondary" onclick="creerSousDossier()" style="width: auto;">Créer</button>
+                </div>
+                <div class="folders-tags" id="listeSousDossiersTags"></div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card" style="padding: 16px;">
+                <div class="search-bar">
+                    <input type="text" id="rechercheInput" placeholder="Rechercher par titre, dossier, année, description..." onkeyup="filtrerArchives()">
+                </div>
+            </div>
+
+            <div class="card" style="padding: 0; overflow: hidden;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Titre / Fichier</th>
+                            <th>Dossier & Année</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableArchives">
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <!-- Formulaire -->
-    <div class="card">
-        <h3>Ajouter un document</h3>
-        <input type="text" id="titre" placeholder="Titre du document">
-        <select id="dossierSelect"></select>
-        <textarea id="description" placeholder="Description..."></textarea>
-        <button onclick="ajouterArchive()">Enregistrer l'archive</button>
-    </div>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 
-    <!-- Liste -->
-    <div class="card">
-        <h3>Mes Documents</h3>
-        <table id="tableArchives">
-            <thead>
-                <tr><th>Titre</th><th>Dossier</th><th>Action</th></tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-        </table>
-    </div>
-</div>
+    <script>
+        const CLIENT_ID = '93983819430-vc42kt9a211fjpf6a5nf03hcf147ldtp.apps.googleusercontent.com';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
-<script>
-    const CLIENT_ID = '93983819430-vc42kt9a211fjpf6a5nf03hcf147ldtp.apps.googleusercontent.com';
-    // Le reste de votre logique JavaScript reste identique...
-    // (J'ai simplifié ici pour vous montrer le design, assurez-vous de garder vos fonctions existantes)
-</script>
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            await gapi.client.init({
+                discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+            });
+            gapiInited = true;
+        }
+
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: '', 
+            });
+            gisInited = true;
+        }
+
+        function handleAuthClick() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    throw (resp);
+                }
+                document.getElementById('auth-button').style.display = 'none';
+                document.getElementById('signout-button').style.display = 'block';
+            };
+
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                tokenClient.requestAccessToken({prompt: ''});
+            }
+        }
+
+        function handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token !== null) {
+                google.accounts.oauth2.revoke(token.access_token, () => {
+                    gapi.client.setToken('');
+                    document.getElementById('auth-button').style.display = 'block';
+                    document.getElementById('signout-button').style.display = 'none';
+                });
+            }
+        }
+
+        let archives = JSON.parse(localStorage.getItem('mes_archives_tch')) || [];
+        let dossiers = JSON.parse(localStorage.getItem('mes_dossiers_tch')) || ['Opérations', 'Finance', 'Administration'];
+        let sousDossiers = JSON.parse(localStorage.getItem('mes_sous_dossiers_tch')) || ['2024', '2025', '2026'];
+
+        document.getElementById('dateArchivage').valueAsDate = new Date();
+
+        function initialiserDossiers() {
+            const select = document.getElementById('dossierSelect');
+            const tagsContainer = document.getElementById('listeDossiersTags');
+             
+            select.innerHTML = '';
+            tagsContainer.innerHTML = '';
+
+            dossiers.forEach((dossier, index) => {
+                const option = document.createElement('option');
+                option.value = dossier;
+                option.textContent = dossier;
+                select.appendChild(option);
+
+                const badge = document.createElement('div');
+                badge.className = 'folder-badge';
+                badge.innerHTML = `📁 <strong>${dossier}</strong> <span onclick="supprimerDossier(${index})" title="Supprimer">×</span>`;
+                tagsContainer.appendChild(badge);
+            });
+
+            const selectSous = document.getElementById('sousDossierSelect');
+            const tagsSousContainer = document.getElementById('listeSousDossiersTags');
+             
+            selectSous.innerHTML = '';
+            tagsSousContainer.innerHTML = '';
+
+            sousDossiers.forEach((sousDossier, index) => {
+                const option = document.createElement('option');
+                option.value = sousDossier;
+                option.textContent = sousDossier;
+                selectSous.appendChild(option);
+
+                const badge = document.createElement('div');
+                badge.className = 'folder-badge';
+                badge.innerHTML = `📅 <strong>${sousDossier}</strong> <span onclick="supprimerSousDossier(${index})" title="Supprimer">×</span>`;
+                tagsSousContainer.appendChild(badge);
+            });
+        }
+
+        function creerDossier() {
+            const nomInput = document.getElementById('nouveauDossierNom');
+            const nomDossier = nomInput.value.trim();
+
+            if (!nomDossier) return;
+            if (dossiers.includes(nomDossier)) {
+                alert("Ce dossier existe déjà.");
+                return;
+            }
+
+            dossiers.push(nomDossier);
+            localStorage.setItem('mes_dossiers_tch', JSON.stringify(dossiers));
+            initialiserDossiers();
+            nomInput.value = '';
+        }
+
+        function supprimerDossier(index) {
+            if (dossiers.length <= 1) {
+                alert("Vous devez garder au moins un dossier.");
+                return;
+            }
+            const dossierASupprimer = dossiers[index];
+            if (confirm(`Supprimer le dossier "${dossierASupprimer}" ?`)) {
+                dossiers.splice(index, 1);
+                localStorage.setItem('mes_dossiers_tch', JSON.stringify(dossiers));
+                initialiserDossiers();
+            }
+        }
+
+        function creerSousDossier() {
+            const nomInput = document.getElementById('nouveauSousDossierNom');
+            const nomSousDossier = nomInput.value.trim();
+
+            if (!nomSousDossier) return;
+            if (sousDossiers.includes(nomSousDossier)) {
+                alert("Ce sous-dossier existe déjà.");
+                return;
+            }
+
+            sousDossiers.push(nomSousDossier);
+            localStorage.setItem('mes_sous_dossiers_tch', JSON.stringify(sousDossiers));
+            initialiserDossiers();
+            nomInput.value = '';
+        }
+
+        function supprimerSousDossier(index) {
+            if (sousDossiers.length <= 1) {
+                alert("Vous devez garder au moins un sous-dossier.");
+                return;
+            }
+            const sousDossierASupprimer = sousDossiers[index];
+            if (confirm(`Supprimer le sous-dossier "${sousDossierASupprimer}" ?`)) {
+                sousDossiers.splice(index, 1);
+                localStorage.setItem('mes_sous_dossiers_tch', JSON.stringify(sousDossiers));
+                initialiserDossiers();
+            }
+        }
+
+        function ajouterArchive() {
+            const titre = document.getElementById('titre').value.trim();
+            const dossier = document.getElementById('dossierSelect').value;
+            const sousDossier = document.getElementById('sousDossierSelect').value;
+            const date = document.getElementById('dateArchivage').value;
+            const fichierInput = document.getElementById('fichier');
+            const description = document.getElementById('description').value.trim();
+
+            if (!titre) {
+                alert("Veuillez saisir un titre.");
+                return;
+            }
+
+            const nomFichier = fichierInput.files.length > 0 ? fichierInput.files[0].name : "Aucun fichier";
+
+            const nouvelleArchive = {
+                id: Date.now(),
+                titre,
+                dossier,
+                sousDossier,
+                date,
+                nomFichier,
+                description
+            };
+
+            archives.push(nouvelleArchive);
+            sauvegarderEtAfficher();
+            viderFormulaire();
+        }
+
+        function afficherArchives(liste) {
+            const tbody = document.getElementById('tableArchives');
+            tbody.innerHTML = '';
+
+            if (liste.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Aucune archive trouvée.</td></tr>`;
+                return;
+            }
+
+            liste.forEach((item) => {
+                const sousDossierBadge = item.sousDossier ? ` / 📅 ${item.sousDossier}` : '';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <strong style="display:block; color: #1e293b;">${item.titre}</strong>
+                        <span style="font-size: 12px; color: #64748b;">📎 ${item.nomFichier}</span>
+                    </td>
+                    <td><span style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 12px;">📁 ${item.dossier}${sousDossierBadge}</span></td>
+                    <td style="color: #64748b; font-size: 13px;">${item.date}</td>
+                    <td><button class="btn-danger" onclick="supprimerArchive(${item.id})">Supprimer</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function supprimerArchive(id) {
+            if (confirm("Voulez-vous vraiment supprimer cette archive ?")) {
+                archives = archives.filter(item => item.id !== id);
+                sauvegarderEtAfficher();
+            }
+        }
+
+        function filtrerArchives() {
+            const query = document.getElementById('rechercheInput').value.toLowerCase();
+            const resultatFiltre = archives.filter(item => 
+                item.titre.toLowerCase().includes(query) ||
+                item.dossier.toLowerCase().includes(query) ||
+                (item.sousDossier && item.sousDossier.toLowerCase().includes(query)) ||
+                item.description.toLowerCase().includes(query) ||
+                item.nomFichier.toLowerCase().includes(query) ||
+                item.date.toLowerCase().includes(query)
+            );
+            afficherArchives(resultatFiltre);
+        }
+
+        function sauvegarderEtAfficher() {
+            localStorage.setItem('mes_archives_tch', JSON.stringify(archives));
+            afficherArchives(archives);
+        }
+
+        function viderFormulaire() {
+            document.getElementById('titre').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('fichier').value = '';
+            document.getElementById('dateArchivage').valueAsDate = new Date();
+        }
+
+        initialiserDossiers();
+        afficherArchives(archives);
+    </script>
 </body>
 </html>
