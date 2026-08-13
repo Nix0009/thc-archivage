@@ -8,7 +8,6 @@
         :root {
             --primary-color: #1e3a8a;
             --accent-color: #2563eb;
-            --success-color: #2563eb;
             --bg-color: #f8fafc;
             --border-color: #e2e8f0;
             --text-color: #1e293b;
@@ -167,6 +166,8 @@
             border-radius: 6px;
             color: white;
             margin-right: 4px;
+            cursor: pointer;
+            border: none;
         }
         .btn-action:hover {
             background-color: #0369a1;
@@ -262,7 +263,6 @@
 
     <div class="top-header">
         <div class="brand-container">
-            <!-- Intégration de votre lien de logo THC -->
             <img src="https://i.postimg.cc/yxxj5h9m/THC.png" alt="Logo THC" class="brand-logo" onerror="this.style.display='none'">
             <h1>Trust Handling Company - Archives</h1>
         </div>
@@ -656,6 +656,37 @@
             }
         }
 
+        // Fonction sécurisée pour télécharger le fichier directement depuis Google Drive
+        async function telechargerFichier(fileId, nomFichier) {
+            const currentAuthToken = gapi.client.getToken();
+            if (!currentAuthToken || !currentAuthToken.access_token) {
+                alert("Veuillez vous reconnecter à Google Drive.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                    headers: new Headers({ 'Authorization': 'Bearer ' + currentAuthToken.access_token })
+                });
+
+                if (!response.ok) throw new Error("Erreur lors du téléchargement.");
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = nomFichier;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            } catch (err) {
+                console.error(err);
+                // Solution de secours si l'API directe échoue
+                window.open(`https://drive.google.com/uc?export=download&id=${fileId}`, '_blank');
+            }
+        }
+
         function afficherArchives(liste) {
             const tbody = document.getElementById('tableArchives');
             tbody.innerHTML = '';
@@ -677,7 +708,7 @@
                             <span class="file-badge ${typeInfo.classe}">${typeInfo.texte}</span>
                             <div style="margin-top: 6px;">
                                 <a href="https://drive.google.com/file/d/${item.fileId}/view" target="_blank" class="btn-action">👁️ Aperçu</a>
-                                <a href="https://drive.google.com/uc?export=download&id=${item.fileId}" target="_blank" class="btn-action" style="background-color: #059669;">📥 Télécharger</a>
+                                <button onclick="telechargerFichier('${item.fileId}', '${item.nomFichier}')" class="btn-action" style="background-color: #059669;">📥 Télécharger</button>
                             </div>
                         </div>
                     `;
