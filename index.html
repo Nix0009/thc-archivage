@@ -25,19 +25,30 @@
         .top-header {
             background-color: var(--primary-color);
             color: white;
-            padding: 20px 40px;
+            padding: 15px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .top-header h1 {
-            font-size: 20px;
-            margin: 0;
+        .brand-container {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
+        }
+
+        .brand-logo {
+            height: 45px;
+            object-fit: contain;
+            background: white;
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        .top-header h1 {
+            font-size: 18px;
+            margin: 0;
         }
 
         .auth-container {
@@ -146,6 +157,21 @@
             background-color: #dc2626;
         }
 
+        .btn-action {
+            background-color: #0284c7;
+            padding: 6px 10px;
+            font-size: 12px;
+            width: auto;
+            text-decoration: none;
+            display: inline-block;
+            border-radius: 6px;
+            color: white;
+            margin-right: 4px;
+        }
+        .btn-action:hover {
+            background-color: #0369a1;
+        }
+
         .search-bar input {
             margin-bottom: 0;
             padding: 12px 16px;
@@ -214,12 +240,32 @@
             color: #ef4444;
             font-weight: bold;
         }
+
+        .file-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .badge-pdf { background: #fee2e2; color: #991b1b; }
+        .badge-word { background: #dbeafe; color: #1e40af; }
+        .badge-excel { background: #dcfce7; color: #166534; }
+        .badge-ppt { background: #ffedd5; color: #9a3412; }
+        .badge-img { background: #f3e8ff; color: #6b21a8; }
+        .badge-other { background: #f1f5f9; color: #475569; }
     </style>
 </head>
 <body>
 
     <div class="top-header">
-        <h1>✈️ Trust Handling Company - Archives</h1>
+        <div class="brand-container">
+            <!-- Remplacement par votre logo THC -->
+            <img src="https://i.ibb.co/3ykG81V/logo-thc.png" alt="Logo THC" class="brand-logo" onerror="this.style.display='none'">
+            <h1>Trust Handling Company - Archives</h1>
+        </div>
         <div class="auth-container">
             <span id="auth-status" class="user-status" style="display: none;">Connecté à Google Drive</span>
             <button id="auth-button" onclick="handleAuthClick()" style="width: auto; padding: 8px 16px;">Connexion Google Drive</button>
@@ -275,7 +321,7 @@
         <div>
             <div class="card" style="padding: 16px;">
                 <div class="search-bar">
-                    <input type="text" id="rechercheInput" placeholder="Rechercher par titre, dossier, année, description..." onkeyup="filtrerArchives()">
+                    <input type="text" id="rechercheInput" placeholder="Rechercher par titre, dossier, type, description..." onkeyup="filtrerArchives()">
                 </div>
             </div>
 
@@ -306,7 +352,7 @@
         let tokenClient;
         let gapiInited = false;
         let gisInited = false;
-        let rootFolderId = null;
+        let rootFolderId = localStorage.getItem('tch_root_folder_id') || null;
 
         function gapiLoaded() {
             gapi.load('client', initializeGapiClient);
@@ -317,6 +363,7 @@
                 discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
             });
             gapiInited = true;
+            verifierSessionExistante();
         }
 
         function gisLoaded() {
@@ -326,6 +373,21 @@
                 callback: handleTokenResponse,
             });
             gisInited = true;
+            verifierSessionExistante();
+        }
+
+        function verifierSessionExistante() {
+            const savedToken = localStorage.getItem('tch_google_token');
+            const tokenExpiry = localStorage.getItem('tch_token_expiry');
+
+            if (savedToken && tokenExpiry && new Date().getTime() < tokenExpiry) {
+                gapi.client.setToken({ access_token: savedToken });
+                if (gapiInited && gisInited) {
+                    document.getElementById('auth-button').style.display = 'none';
+                    document.getElementById('auth-status').style.display = 'block';
+                    document.getElementById('signout-button').style.display = 'block';
+                }
+            }
         }
 
         async function handleTokenResponse(resp) {
@@ -333,11 +395,17 @@
                 alert("Erreur de connexion Google Drive.");
                 return;
             }
+            
+            const expiresIn = resp.expires_in ? resp.expires_in * 1000 : 3600 * 1000;
+            const expiryTime = new Date().getTime() + expiresIn;
+            
+            localStorage.setItem('tch_google_token', resp.access_token);
+            localStorage.setItem('tch_token_expiry', expiryTime);
+
             document.getElementById('auth-button').style.display = 'none';
             document.getElementById('auth-status').style.display = 'block';
             document.getElementById('signout-button').style.display = 'block';
             
-            // Initialiser le dossier racine sur le Drive de l'utilisateur
             await verifierOuCreerDossierRacine();
         }
 
@@ -346,7 +414,7 @@
                 alert("L'API Google n'est pas encore totalement chargée. Veuillez patienter une seconde.");
                 return;
             }
-            tokenClient.requestAccessToken({prompt: 'consent'});
+            tokenClient.requestAccessToken({prompt: ''});
         }
 
         function handleSignoutClick() {
@@ -354,6 +422,10 @@
             if (token !== null) {
                 google.accounts.oauth2.revoke(token.access_token, () => {
                     gapi.client.setToken('');
+                    localStorage.removeItem('tch_google_token');
+                    localStorage.removeItem('tch_token_expiry');
+                    localStorage.removeItem('tch_root_folder_id');
+                    
                     document.getElementById('auth-button').style.display = 'block';
                     document.getElementById('auth-status').style.display = 'none';
                     document.getElementById('signout-button').style.display = 'none';
@@ -363,8 +435,9 @@
         }
 
         async function verifierOuCreerDossierRacine() {
+            if (rootFolderId) return;
+
             try {
-                // Chercher si le dossier principal existe déjà sur Google Drive
                 const response = await gapi.client.drive.files.list({
                     q: "mimeType='application/vnd.google-apps.folder' and name='Trust Handling Company - Archives' and trashed=false",
                     fields: 'files(id, name)'
@@ -374,7 +447,6 @@
                 if (files && files.length > 0) {
                     rootFolderId = files[0].id;
                 } else {
-                    // Créer le dossier s'il n'existe pas
                     const folderMetadata = {
                         'name': 'Trust Handling Company - Archives',
                         'mimeType': 'application/vnd.google-apps.folder'
@@ -385,6 +457,7 @@
                     });
                     rootFolderId = folderCreate.result.id;
                 }
+                localStorage.setItem('tch_root_folder_id', rootFolderId);
             } catch (err) {
                 console.error("Erreur lors de la configuration du dossier Drive :", err);
             }
@@ -492,6 +565,16 @@
             }
         }
 
+        function obtenirTypeFichier(nomFichier) {
+            const ext = nomFichier.split('.').pop().toLowerCase();
+            if (['pdf'].includes(ext)) return { texte: 'PDF', classe: 'badge-pdf' };
+            if (['doc', 'docx'].includes(ext)) return { texte: 'WORD', classe: 'badge-word' };
+            if (['xls', 'xlsx'].includes(ext)) return { texte: 'EXCEL', classe: 'badge-excel' };
+            if (['ppt', 'pptx'].includes(ext)) return { texte: 'POWERPOINT', classe: 'badge-ppt' };
+            if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return { texte: 'IMAGE', classe: 'badge-img' };
+            return { texte: ext.toUpperCase() || 'FICHIER', classe: 'badge-other' };
+        }
+
         async function ajouterArchive() {
             const titre = document.getElementById('titre').value.trim();
             const dossier = document.getElementById('dossierSelect').value;
@@ -505,7 +588,8 @@
                 return;
             }
 
-            if (!gapi.client.getToken()) {
+            const currentAuthToken = gapi.client.getToken();
+            if (!currentAuthToken || !currentAuthToken.access_token) {
                 alert("Veuillez d'abord vous connecter à Google Drive en haut à droite.");
                 return;
             }
@@ -531,7 +615,7 @@
                         'parents': [rootFolderId]
                     };
 
-                    const accessToken = gapi.client.getToken().access_token;
+                    const accessToken = currentAuthToken.access_token;
                     const form = new FormData();
                     form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
                     form.append('file', file);
@@ -542,6 +626,9 @@
                         body: form
                     });
                     const fileData = await res.json();
+                    if (fileData.error) {
+                        throw new Error(fileData.error.message);
+                    }
                     fileId = fileData.id;
                 }
 
@@ -562,7 +649,7 @@
                 alert("Archive enregistrée et fichier stocké sur Google Drive avec succès !");
             } catch (err) {
                 console.error(err);
-                alert("Une erreur est survenue lors du stockage sur Google Drive.");
+                alert("Une erreur est survenue lors du stockage sur Google Drive. Veuillez vous reconnecter.");
             } finally {
                 btnEnregistrer.disabled = false;
                 btnEnregistrer.textContent = "Enregistrer sur Drive";
@@ -580,15 +667,27 @@
 
             liste.forEach((item) => {
                 const sousDossierBadge = item.sousDossier ? ` / 📅 ${item.sousDossier}` : '';
-                const lienFichier = item.fileId 
-                    ? `<a href="https://drive.google.com/file/d/${item.fileId}/view" target="_blank" style="color: #2563eb; text-decoration: none;">📎 ${item.nomFichier} (Ouvrir sur Drive)</a>` 
-                    : `📎 ${item.nomFichier}`;
+                const typeInfo = obtenirTypeFichier(item.nomFichier);
+                
+                let actionsFichier = `<span>📎 ${item.nomFichier}</span>`;
+                if (item.fileId) {
+                    actionsFichier = `
+                        <div style="margin-top: 4px;">
+                            <span style="font-size: 13px; font-weight: 500;">📎 ${item.nomFichier}</span><br>
+                            <span class="file-badge ${typeInfo.classe}">${typeInfo.texte}</span>
+                            <div style="margin-top: 6px;">
+                                <a href="https://drive.google.com/file/d/${item.fileId}/view" target="_blank" class="btn-action">👁️ Aperçu</a>
+                                <a href="https://drive.google.com/uc?export=download&id=${item.fileId}" target="_blank" class="btn-action" style="background-color: #059669;">📥 Télécharger</a>
+                            </div>
+                        </div>
+                    `;
+                }
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>
-                        <strong style="display:block; color: #1e293b;">${item.titre}</strong>
-                        <span style="font-size: 12px; color: #64748b;">${lienFichier}</span>
+                        <strong style="display:block; color: #1e293b; font-size: 15px;">${item.titre}</strong>
+                        ${actionsFichier}
                     </td>
                     <td><span style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 12px;">📁 ${item.dossier}${sousDossierBadge}</span></td>
                     <td style="color: #64748b; font-size: 13px;">${item.date}</td>
