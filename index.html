@@ -656,7 +656,6 @@
             }
         }
 
-        // Fonction sécurisée pour télécharger le fichier directement depuis Google Drive
         async function telechargerFichier(fileId, nomFichier) {
             const currentAuthToken = gapi.client.getToken();
             if (!currentAuthToken || !currentAuthToken.access_token) {
@@ -682,7 +681,6 @@
                 a.remove();
             } catch (err) {
                 console.error(err);
-                // Solution de secours si l'API directe échoue
                 window.open(`https://drive.google.com/uc?export=download&id=${fileId}`, '_blank');
             }
         }
